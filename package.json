@@ -1,7 +1,7 @@
 {
   "name": "tlp",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -9,10 +9,22 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-community/slider": "5.0.1",
+    "@supabase/supabase-js": "^2.91.0",
     "expo": "~54.0.31",
+    "expo-auth-session": "~7.0.10",
+    "expo-constants": "~18.0.0",
+    "expo-crypto": "~15.0.8",
+    "expo-linking": "~8.0.0",
+    "expo-router": "~5.0.0",
+    "expo-secure-store": "~15.0.8",
     "expo-status-bar": "~3.0.9",
+    "expo-web-browser": "~15.0.10",
     "react": "19.1.0",
-    "react-native": "0.81.5"
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "5.2.0",
+    "react-native-screens": "~4.8.0",
+    "react-native-svg": "15.12.1"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
