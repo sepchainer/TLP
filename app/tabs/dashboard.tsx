@@ -108,6 +108,8 @@ export default function Dashboard() {
           setPercentageChange(thisWeekTotal > 0 ? 100 : 0); // 100% wenn in der Vorwoche nichts war
         }
 
+        const total14dLoad = workouts14d.data?.reduce((sum, item) => sum + (item.calculated_load || 0), 0) || 0;
+
         // 2. Wochentrend für das Balkendiagramm aufbereiten
         const trend = [];
         for (let i = 6; i >= 0; i--) {
@@ -140,7 +142,8 @@ export default function Dashboard() {
             },
             fitbitCheck || undefined,
             currentLoad,
-            pastSevenDaysLoad
+            pastSevenDaysLoad,
+            total14dLoad - currentLoad   // Letzte 14 Tage (exkl. heute)
           );
           setReadinessScore(liveScore);
         } else {
