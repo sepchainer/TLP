@@ -67,92 +67,95 @@ export default function Dashboard() {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
       
-      // Zeiträume berechnen
-      const sevenDaysAgoDate = new Date();
-      sevenDaysAgoDate.setDate(sevenDaysAgoDate.getDate() - 7);
-      const sevenDaysAgo = sevenDaysAgoDate.toISOString().split('T')[0];
+      const sixDaysAgo = new Date();
+      sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+      const sixDaysAgoStr = sixDaysAgo.toISOString().split('T')[0];
 
-      const fourteenDaysAgoDate = new Date();
-      fourteenDaysAgoDate.setDate(fourteenDaysAgoDate.getDate() - 14);
-      const fourteenDaysAgo = fourteenDaysAgoDate.toISOString().split('T')[0];
+      const thirteenDaysAgo = new Date();
+      thirteenDaysAgo.setDate(thirteenDaysAgo.getDate() - 13);
+      const thirteenDaysAgoStr = thirteenDaysAgo.toISOString().split('T')[0];
+
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        // Wir holen jetzt Daten für 14 Tage (gte fourteenDaysAgo)
-        const [wellnessCheck, fitbitCheck, workoutsToday, workouts14d] = await Promise.all([
+        const [wellnessToday, wellnessHistory, workouts14d, fitbitRealtime] = await Promise.all([
           supabase.from('wellness_logs').select('*').eq('user_id', user.id).eq('date', today).single(),
-          fetchFitbitWellnessData(user.id),
-          supabase.from('workout_logs').select('calculated_load').eq('user_id', user.id).eq('date', today),
-          supabase.from('workout_logs').select('date, calculated_load').eq('user_id', user.id).gte('date', fourteenDaysAgo)
+          supabase.from('wellness_logs').select('hrv, resting_hr').eq('user_id', user.id).gte('date', thirtyDaysAgoStr),
+          supabase.from('workout_logs').select('date, calculated_load').eq('user_id', user.id).gte('date', thirteenDaysAgoStr),
+          fetchFitbitWellnessData(user.id) // Falls du die Daten noch live von der API holst
         ]);
         
-        // 1. Load Summen & Wochenvergleich
-        const currentLoad = workoutsToday.data?.reduce((sum, item) => sum + (item.calculated_load || 0), 0) || 0;
+        // 1. WORKLOAD BERECHNUNG (ACWR)
+        const workouts = workouts14d.data || [];
+        const currentLoad = workouts.filter(w => w.date === today).reduce((s, i) => s + (i.calculated_load || 0), 0);
         setTodayLoad(currentLoad);
 
-        // Aktuelle Woche (heute eingeschlossen: letzten 7 Tage)
-        const thisWeekWorkouts = workouts14d.data?.filter(w => w.date >= sevenDaysAgo) || [];
-        const thisWeekTotal = thisWeekWorkouts.reduce((sum, item) => sum + (item.calculated_load || 0), 0);
+        const thisWeekTotal = workouts.filter(w => w.date >= sixDaysAgoStr).reduce((s, i) => s + (i.calculated_load || 0), 0);
+        const lastWeekTotal = workouts.filter(w => w.date >= thirteenDaysAgoStr && w.date < sixDaysAgoStr).reduce((s, i) => s + (i.calculated_load || 0), 0);
+        
         setCurrentWeekTotal(thisWeekTotal);
+        setPercentageChange(lastWeekTotal > 0 ? ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100 : 0);
 
-        // Vorwoche (Daten zwischen -14 und -7 Tagen)
-        const lastWeekWorkouts = workouts14d.data?.filter(w => w.date >= fourteenDaysAgo && w.date < sevenDaysAgo) || [];
-        const lastWeekTotal = lastWeekWorkouts.reduce((sum, item) => sum + (item.calculated_load || 0), 0);
+        // 2. BASELINE BERECHNUNG (Rolling 30 Days)
+        const history = wellnessHistory.data || [];
+        const avgHrv = history.filter(h => h.hrv).reduce((s, i, _, a) => s + i.hrv! / a.length, 0) || 60;
+        const avgRhr = history.filter(h => h.resting_hr).reduce((s, i, _, a) => s + i.resting_hr! / a.length, 0) || 60;
 
-        // Prozentuale Veränderung berechnen
-        if (lastWeekTotal > 0) {
-          const change = ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100;
-          setPercentageChange(change);
+        // 3. READINESS SCORE
+        if (wellnessToday.data) {
+          setHasLoggedToday(true);
+          const data = wellnessToday.data;
+          
+          // Wir priorisieren die Fitbit-API-Daten, nutzen aber die DB als Fallback
+          const hrv = fitbitRealtime?.hrv || data.hrv;
+          const rhr = fitbitRealtime?.restingHr || data.resting_hr;
+          const sleepHrs = fitbitRealtime?.sleepHours || data.sleep_hours;
+
+          const liveScore = calculateReadiness(
+            {
+              mood: data.mood,
+              recovery: data.recovery,
+              health: data.health_status,
+              physical: data.physical,
+              sleep: data.sleep,
+              stress: data.stress,
+              isSick: data.is_sick
+            },
+            {
+              hrv: hrv,
+              restingHr: rhr,
+              sleepHours: sleepHrs,
+              baselineHrv: avgHrv,
+              baselineRhr: avgRhr
+            },
+            currentLoad,
+            thisWeekTotal - currentLoad, // Past 6 days
+            workouts.reduce((s, i) => s + (i.calculated_load || 0), 0) - currentLoad // Past 13 days
+          );
+          setReadinessScore(liveScore);
+          if (fitbitRealtime) setFitbitData(fitbitRealtime);
         } else {
-          setPercentageChange(thisWeekTotal > 0 ? 100 : 0); // 100% wenn in der Vorwoche nichts war
+          setHasLoggedToday(false);
+          setReadinessScore(0);
         }
 
-        const total14dLoad = workouts14d.data?.reduce((sum, item) => sum + (item.calculated_load || 0), 0) || 0;
-
-        // 2. Wochentrend für das Balkendiagramm aufbereiten
+        // 4. TREND CHART DATA
         const trend = [];
         for (let i = 6; i >= 0; i--) {
           const d = new Date();
           d.setDate(d.getDate() - i);
           const dStr = d.toISOString().split('T')[0];
-          // Filtere aus den 14-Tage-Daten den jeweiligen Tag raus
-          const load = workouts14d.data?.filter(w => w.date === dStr).reduce((s, x) => s + x.calculated_load, 0) || 0;
-          trend.push({ date: dStr, load: load });
+          const load = workouts.filter(w => w.date === dStr).reduce((s, x) => s + x.calculated_load, 0);
+          trend.push({ date: dStr, load });
         }
         setWeeklyLoadData(trend);
-
-        // 3. Fitbit & Readiness
-        if (fitbitCheck) setFitbitData(fitbitCheck);
-
-        if (wellnessCheck.data) {
-          setHasLoggedToday(true);
-          // Für die Readiness-Fatigue nutzen wir die Last der letzten 7 Tage (ohne heute)
-          const pastSevenDaysLoad = thisWeekTotal - currentLoad; 
-
-          const liveScore = calculateReadiness(
-            {
-              mood: wellnessCheck.data.mood,
-              recovery: wellnessCheck.data.recovery,
-              health: wellnessCheck.data.health_status,
-              physical: wellnessCheck.data.physical,
-              sleep: wellnessCheck.data.sleep,
-              stress: wellnessCheck.data.stress,
-              isSick: wellnessCheck.data.is_sick
-            },
-            fitbitCheck || undefined,
-            currentLoad,
-            pastSevenDaysLoad,
-            total14dLoad - currentLoad   // Letzte 14 Tage (exkl. heute)
-          );
-          setReadinessScore(liveScore);
-        } else {
-          setHasLoggedToday(false);
-          setReadinessScore(0);
-        }
       }
     } catch (error) {
-      console.error("Fehler beim Laden:", error);
+      console.error("Dashboard Load Error:", error);
     } finally {
       setLoading(false);
     }
