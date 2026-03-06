@@ -4,8 +4,9 @@ import Slider from '@react-native-community/slider';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+// 1. TanStack Query importieren
+import { useQueryClient } from '@tanstack/react-query';
 
-// 1. Isolierte Slider-Komponente gegen das Ruckeln
 const SliderGroup = memo(({ label, initialValue, onValueChange, color }: any) => {
   const [displayValue, setDisplayValue] = useState(initialValue);
 
@@ -33,8 +34,8 @@ const SliderGroup = memo(({ label, initialValue, onValueChange, color }: any) =>
 
 export default function TrainingModal() {
   const router = useRouter();
+  const queryClient = useQueryClient(); // 2. Query Client initialisieren
   
-  // States
   const [workoutType, setWorkoutType] = useState('Kraft');
   const [duration, setDuration] = useState('60');
   const [muscularEffort, setMuscularEffort] = useState(5);
@@ -42,11 +43,9 @@ export default function TrainingModal() {
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Stabile Update-Funktionen
   const handleMuscularChange = useCallback((v: number) => setMuscularEffort(v), []);
   const handleRespirationChange = useCallback((v: number) => setRespirationEffort(v), []);
 
-  // Live-Berechnung der Last für die UI-Vorschau
   const durationInt = parseInt(duration) || 0;
   const previewLoad = Math.round(((muscularEffort + respirationEffort) / 2) * durationInt);
 
@@ -64,6 +63,7 @@ export default function TrainingModal() {
         return;
       }
 
+      // 3. Training in Supabase speichern
       const { error } = await supabase.from('workout_logs').insert({
         user_id: user.id,
         workout_type: workoutType,
@@ -76,6 +76,12 @@ export default function TrainingModal() {
       });
 
       if (error) throw error;
+
+      // 4. CACHE INVALIDIEREN
+      // Das sorgt dafür, dass das Dashboard die neuen Last-Werte und 
+      // den daraus resultierenden neuen Readiness-Score sofort lädt.
+      await queryClient.invalidateQueries({ queryKey: ['dashboardData'] });
+
       router.back();
     } catch (error: any) {
       Alert.alert("Fehler", error.message);
@@ -88,7 +94,6 @@ export default function TrainingModal() {
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Training loggen</Text>
 
-      {/* Belastungs-Vorschau Badge */}
       <View style={styles.loadPreviewCard}>
         <Text style={styles.previewLabel}>Voraussichtliche Last</Text>
         <Text style={styles.previewValue}>{previewLoad} <Text style={styles.previewUnit}>pts</Text></Text>

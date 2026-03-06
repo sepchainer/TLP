@@ -6,6 +6,8 @@ import { useRouter } from 'expo-router';
 import { calculateReadiness } from '../lib/calculations';
 import { fetchFitbitWellnessData } from '../lib/fitbit_sync';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { useDashboardData } from '../hooks/useDashboardData';
 
 // 1. Isolierte Slider-Komponente (Memoized gegen Ruckeln)
 const SliderGroup = memo(({ label, initialValue, onValueChange, color }: any) => {
@@ -35,6 +37,8 @@ const SliderGroup = memo(({ label, initialValue, onValueChange, color }: any) =>
 
 export default function WellnessModal() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: dashData } = useDashboardData();
   
   // States
   const [mood, setMood] = useState(5);
@@ -73,19 +77,43 @@ export default function WellnessModal() {
   const handleSleep = useCallback((v: number) => setSleepQuality(v), []);
   const handleStress = useCallback((v: number) => setStress(v), []);
 
-  async function saveWellness() {
+async function saveWellness() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const today = new Date().toISOString().split('T')[0];
+      
+      // 1. Subjektive Daten
       const subjectiveData = {
-          mood, recovery, health, physical, sleep: sleepQuality, stress, isSick
+        mood, recovery, health, physical, sleep: sleepQuality, stress, isSick
       };
 
-      const score = calculateReadiness(subjectiveData, fitbitData);
+      // 2. Objektive Daten (Baselines kommen nun sicher aus dashData)
+      const objectiveData = {
+        hrv: fitbitData?.hrv || null,
+        sleepHours: fitbitData?.sleepHours || null,
+        restingHr: fitbitData?.restingHr || null,
+        baselineHrv: dashData?.avgHrv || 60, 
+        baselineRhr: dashData?.avgRhr || 60
+      };
 
-      const { error: logError } = await supabase.from('wellness_logs').upsert({
+      // 3. Workload-Variablen für die Berechnung
+      const currentLoad = dashData?.todayLoad || 0;
+      const past6dLoad = (dashData?.currentWeekTotal || 0) - currentLoad;
+      const past13dLoad = (dashData?.total14dLoad || 0) - currentLoad;
+
+      // Readiness berechnen
+      const score = calculateReadiness(
+        subjectiveData,
+        objectiveData,
+        currentLoad,
+        past6dLoad,
+        past13dLoad
+      );
+
+      // In Datenbank speichern
+      await supabase.from('wellness_logs').upsert({
           user_id: user.id,
           date: today,
           mood, recovery, health_status: health, physical, sleep: sleepQuality, stress,
@@ -101,7 +129,9 @@ export default function WellnessModal() {
           date: today
       });
 
-      if (logError) throw logError;
+      // Dashboard Cache löschen, damit es sofort neu lädt
+      await queryClient.invalidateQueries({ queryKey: ['dashboardData'] });
+
       router.back();
     } catch (error: any) {
       Alert.alert("Fehler", error.message);
