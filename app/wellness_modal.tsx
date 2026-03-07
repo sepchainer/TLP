@@ -13,6 +13,11 @@ import { useDashboardData } from '../hooks/useDashboardData';
 const SliderGroup = memo(({ label, initialValue, onValueChange, color }: any) => {
   const [displayValue, setDisplayValue] = useState(initialValue);
 
+  // Sync displayValue when initialValue changes (e.g., when Fitbit data loads)
+  useEffect(() => {
+    setDisplayValue(initialValue);
+  }, [initialValue]);
+
   return (
     <View style={styles.inputGroup}>
       <View style={styles.labelRow}>
@@ -61,7 +66,8 @@ export default function WellnessModal() {
         const data = await fetchFitbitWellnessData(user.id);
         if (data) {
           setFitbitData(data);
-          if (data.sleepHours) setSleepQuality(Math.min(Math.round(data.sleepHours), 10));
+          // Note: sleepQuality is subjective (user input), not based on sleep duration
+          // sleepHours is stored in fitbitData for the objective calculation
         }
       }
       setIsLoadingFitbit(false);
@@ -139,7 +145,7 @@ async function saveWellness() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} bounces={false}>
+    <ScrollView contentContainerStyle={styles.container} bounces={false} style={{ backgroundColor: '#1a1a1a' }}>
       <Text style={styles.title}>Daily Check-In</Text>
 
       <View style={[styles.fitbitInfoBox, fitbitData ? styles.fitbitSuccess : styles.fitbitMissing]}>
@@ -191,26 +197,26 @@ async function saveWellness() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 25, backgroundColor: 'white', paddingBottom: 60 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  container: { padding: 25, backgroundColor: '#1a1a1a', paddingBottom: 60, paddingTop: 60 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#ffffff' },
   fitbitInfoBox: { 
-    height: 55, // Feste Höhe verhindert UI-Sprünge beim Laden
+    height: 55,
     flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, 
     marginBottom: 25, gap: 10, borderWidth: 1 
   },
-  fitbitSuccess: { backgroundColor: '#e8f5e9', borderColor: '#c8e6c9' },
-  fitbitMissing: { backgroundColor: '#fff3e0', borderColor: '#ffe0b2' },
-  fitbitText: { fontSize: 12, fontWeight: '500', flex: 1, color: '#444' },
+  fitbitSuccess: { backgroundColor: '#1a3a1a', borderColor: '#4CAF50' },
+  fitbitMissing: { backgroundColor: '#3a2a1a', borderColor: '#FF9800' },
+  fitbitText: { fontSize: 12, fontWeight: '500', flex: 1, color: '#cccccc' },
   inputGroup: { marginBottom: 15 },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  label: { fontSize: 16, fontWeight: '600', color: '#333' },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  label: { fontSize: 16, fontWeight: '600', color: '#ffffff' },
   valueText: { fontWeight: 'bold', fontSize: 16 },
   slider: { width: '100%', height: 40 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 20, gap: 10 },
-  toggleButton: { flex: 1, padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#eee', alignItems: 'center', backgroundColor: '#f8f9fa' },
-  toggleText: { fontWeight: '600' },
-  sickActive: { backgroundColor: '#ffebee', borderColor: '#ef5350' },
-  injuredActive: { backgroundColor: '#fff3e0', borderColor: '#ff9800' },
+  toggleButton: { flex: 1, padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#333333', alignItems: 'center', backgroundColor: '#2a2a2a' },
+  toggleText: { fontWeight: '600', color: '#ffffff' },
+  sickActive: { backgroundColor: '#3a1a1a', borderColor: '#F44336' },
+  injuredActive: { backgroundColor: '#3a2a1a', borderColor: '#FF9800' },
   saveButton: { backgroundColor: '#007AFF', padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 10 },
   saveButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
 });

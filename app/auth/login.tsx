@@ -105,8 +105,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: '#fff' },
-    title: { fontSize: 24, fontWeight: '600', marginBottom: 24, textAlign: 'center' },
-    input: { borderWidth: 1, borderColor: '#ccc', padding: 12, borderRadius: 8, marginBottom: 12 },
+    container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: '#0f0f0f' },
+    title: { fontSize: 24, fontWeight: '600', marginBottom: 24, textAlign: 'center', color: '#ffffff' },
+    input: { borderWidth: 1, borderColor: '#444444', padding: 12, borderRadius: 8, marginBottom: 12, backgroundColor: '#1a1a1a', color: '#ffffff' },
     switchRow: { marginTop: 24, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
 });

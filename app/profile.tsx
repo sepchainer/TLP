@@ -119,10 +119,10 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa', padding: 20, paddingTop: 60 },
-  title: { fontSize: 26, fontWeight: 'bold', marginBottom: 30, textAlign: 'center' },
-  section: { backgroundColor: 'white', padding: 20, borderRadius: 15, marginBottom: 20, elevation: 2 },
-  subtitle: { fontSize: 18, fontWeight: '600', marginBottom: 15 },
+  container: { flex: 1, backgroundColor: '#0f0f0f', padding: 20, paddingTop: 60 },
+  title: { fontSize: 26, fontWeight: 'bold', marginBottom: 30, textAlign: 'center', color: '#ffffff' },
+  section: { backgroundColor: '#2a2a2a', padding: 20, borderRadius: 15, marginBottom: 20, elevation: 2 },
+  subtitle: { fontSize: 18, fontWeight: '600', marginBottom: 15, color: '#ffffff' },
   fitbitButton: { 
     backgroundColor: '#00B0B9', 
     padding: 15, 

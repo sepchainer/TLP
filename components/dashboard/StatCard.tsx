@@ -27,7 +27,7 @@ export const StatCard = ({ icon, label, value, unit, color }: StatCardProps) => 
 
 const styles = StyleSheet.create({
   statCard: { 
-    backgroundColor: 'white', 
+    backgroundColor: '#2a2a2a', 
     width: '48%', 
     padding: 15, 
     borderRadius: 15, 
@@ -37,11 +37,11 @@ const styles = StyleSheet.create({
     elevation: 2, 
     shadowColor: '#000', 
     shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.05, 
+    shadowOpacity: 0.3, 
     shadowRadius: 5 
   },
   iconCircle: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  statLabel: { fontSize: 12, color: '#6c757d' },
-  statValue: { fontSize: 18, fontWeight: 'bold', color: '#212529' },
-  statUnit: { fontSize: 12, fontWeight: 'normal', color: '#6c757d' }
+  statLabel: { fontSize: 12, color: '#888888' },
+  statValue: { fontSize: 18, fontWeight: 'bold', color: '#ffffff' },
+  statUnit: { fontSize: 12, fontWeight: 'normal', color: '#888888' }
 });

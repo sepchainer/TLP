@@ -91,7 +91,7 @@ export default function TrainingModal() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" style={{ backgroundColor: '#1a1a1a' }}>
       <Text style={styles.title}>Training loggen</Text>
 
       <View style={styles.loadPreviewCard}>
@@ -165,36 +165,36 @@ export default function TrainingModal() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 25, backgroundColor: 'white', paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  container: { padding: 25, backgroundColor: '#1a1a1a', paddingBottom: 40, paddingTop: 60 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#ffffff' },
   
   loadPreviewCard: {
-    backgroundColor: '#f1f3f9',
+    backgroundColor: '#2a2a2a',
     padding: 15,
     borderRadius: 15,
     alignItems: 'center',
     marginBottom: 25,
     borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderColor: '#3a3a3a'
   },
-  previewLabel: { fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 },
+  previewLabel: { fontSize: 12, color: '#888888', textTransform: 'uppercase', letterSpacing: 1 },
   previewValue: { fontSize: 32, fontWeight: '800', color: '#5856D6' },
-  previewUnit: { fontSize: 16, fontWeight: '600', color: '#94a3b8' },
+  previewUnit: { fontSize: 16, fontWeight: '600', color: '#888888' },
 
-  subTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12, color: '#333' },
+  subTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12, color: '#ffffff' },
   typeContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 25 },
-  typeButton: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 25, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc' },
+  typeButton: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 25, borderWidth: 1, borderColor: '#3a3a3a', backgroundColor: '#2a2a2a' },
   typeButtonActive: { backgroundColor: '#5856D6', borderColor: '#5856D6' },
-  typeButtonText: { color: '#64748b', fontWeight: '500' },
+  typeButtonText: { color: '#888888', fontWeight: '500' },
   typeButtonTextActive: { color: 'white', fontWeight: '700' },
 
   inputGroup: { marginBottom: 20 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  label: { fontSize: 16, fontWeight: '600', color: '#333' },
+  label: { fontSize: 16, fontWeight: '600', color: '#ffffff' },
   valueText: { fontWeight: 'bold', fontSize: 16 },
   slider: { width: '100%', height: 40 },
   
-  textInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 14, fontSize: 16, color: '#1e293b' },
+  textInput: { backgroundColor: '#2a2a2a', borderWidth: 1, borderColor: '#3a3a3a', borderRadius: 12, padding: 14, fontSize: 16, color: '#ffffff', marginTop: 12 },
   textArea: { height: 80, textAlignVertical: 'top' },
   
   saveButton: { backgroundColor: '#5856D6', padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 10, shadowColor: '#5856D6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },

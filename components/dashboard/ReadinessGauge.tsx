@@ -19,7 +19,7 @@ export const ReadinessGauge = ({ score }: { score: number }) => {
   return (
     <View style={styles.gaugeContainer}>
       <Svg width={size} height={size}>
-        <Circle cx={center} cy={center} r={radius} stroke="#e9ecef" strokeWidth={strokeWidth} fill="none" />
+        <Circle cx={center} cy={center} r={radius} stroke="#444444" strokeWidth={strokeWidth} fill="none" />
         <Circle
           cx={center} cy={center} r={radius}
           stroke={getColor(score)}
@@ -42,6 +42,6 @@ export const ReadinessGauge = ({ score }: { score: number }) => {
 const styles = StyleSheet.create({
   gaugeContainer: { alignItems: 'center', justifyContent: 'center' },
   scoreTextContainer: { position: 'absolute', alignItems: 'center' },
-  scoreValue: { fontSize: 58, fontWeight: 'bold', color: '#212529' },
-  scoreLabel: { fontSize: 14, color: '#adb5bd', textTransform: 'uppercase' },
+  scoreValue: { fontSize: 58, fontWeight: 'bold', color: '#ffffff' },
+  scoreLabel: { fontSize: 14, color: '#888888', textTransform: 'uppercase' },
 });

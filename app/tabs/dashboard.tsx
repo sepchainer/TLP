@@ -68,7 +68,7 @@ export default function Dashboard() {
                 <Text style={styles.trendTitle}>Wochen-Belastung</Text>
                 <View style={styles.loadSummaryRow}>
                   <Text style={styles.totalLoadText}>{Math.round(data.currentWeekTotal)} pts</Text>
-                  <View style={[styles.percentageBadge, { backgroundColor: data.percentageChange >= 0 ? '#e8f5e9' : '#fff3e0' }]}>
+                  <View style={[styles.percentageBadge, { backgroundColor: data.percentageChange >= 0 ? '#1a3a1a' : '#3a2a1a' }]}>
                     <Ionicons name={data.percentageChange >= 0 ? "trending-up" : "trending-down"} size={14} color={data.percentageChange >= 0 ? "#2e7d32" : "#e65100"} />
                     <Text style={[styles.percentageText, { color: data.percentageChange >= 0 ? "#2e7d32" : "#e65100" }]}>
                       {data.percentageChange >= 0 ? '+' : ''}{Math.round(data.percentageChange)}%
@@ -110,39 +110,39 @@ export default function Dashboard() {
 
 // Hier kommen deine Styles aus der alten Dashboard-Datei rein...
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8f9fa' },
+    container: { flex: 1, backgroundColor: '#0f0f0f' },
     scrollContent: { padding: 20, paddingTop: 60, paddingBottom: 40 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    dateText: { fontSize: 16, color: '#6c757d', marginBottom: 5, textAlign: 'center' },
+    dateText: { fontSize: 16, color: '#888888', marginBottom: 5, textAlign: 'center' },
     statusRow: { alignItems: 'center', marginBottom: 15 },
     badge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6, borderWidth: 1 },
-    badgeSuccess: { backgroundColor: '#e8f5e9', borderColor: '#c8e6c9' },
-    badgeWait: { backgroundColor: '#fff3e0', borderColor: '#ffe0b2' },
+    badgeSuccess: { backgroundColor: '#1a3a1a', borderColor: '#4CAF50' },
+    badgeWait: { backgroundColor: '#3a2a1a', borderColor: '#FF9800' },
     badgeText: { fontSize: 12, fontWeight: '600' },
     mainContent: { alignItems: 'center', justifyContent: 'center', marginVertical: 10 },
     actionContainer: { marginTop: 10, marginBottom: 25, gap: 12 },
     logButton: { backgroundColor: '#007AFF', padding: 16, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
     trainingButton: { backgroundColor: '#5856D6' },
     logButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-    completedBox: { padding: 16, borderRadius: 15, backgroundColor: '#e8f5e9', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
-    completedText: { color: '#2e7d32', fontSize: 16, fontWeight: '600' },
+    completedBox: { padding: 16, borderRadius: 15, backgroundColor: '#1a3a1a', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
+    completedText: { color: '#4CAF50', fontSize: 16, fontWeight: '600' },
     trendHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-    trendCard: { backgroundColor: 'white', padding: 15, borderRadius: 20, marginBottom: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10 },
-    trendTitle: { fontSize: 14, fontWeight: '700', color: '#6c757d', marginBottom: 15 },
+    trendCard: { backgroundColor: '#2a2a2a', padding: 15, borderRadius: 20, marginBottom: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10 },
+    trendTitle: { fontSize: 14, fontWeight: '700', color: '#888888', marginBottom: 15 },
     chartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 100 },
     barColumn: { alignItems: 'center', width: '12%' },
     bar: { width: '80%', borderRadius: 4 },
-    barDate: { fontSize: 10, color: '#adb5bd', marginTop: 5 },
+    barDate: { fontSize: 10, color: '#666666', marginTop: 5 },
     loadSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
-    totalLoadText: { fontSize: 22, fontWeight: '800', color: '#212529' },
+    totalLoadText: { fontSize: 22, fontWeight: '800', color: '#ffffff' },
     percentageBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, gap: 4 },
     percentageText: { fontSize: 12, fontWeight: '700' },
     detailsSection: { marginTop: 20 },
-    sectionTitle: { fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 15 },
+    sectionTitle: { fontSize: 18, fontWeight: '700', color: '#ffffff', marginBottom: 15 },
     statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
-    statCard: { backgroundColor: 'white', width: '48%', padding: 15, borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 12, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5 },
+    statCard: { backgroundColor: '#2a2a2a', width: '48%', padding: 15, borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 12, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 5 },
     iconCircle: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-    statLabel: { fontSize: 12, color: '#6c757d' },
-    statValue: { fontSize: 18, fontWeight: 'bold', color: '#212529' },
-    statUnit: { fontSize: 12, fontWeight: 'normal', color: '#6c757d' }
+    statLabel: { fontSize: 12, color: '#888888' },
+    statValue: { fontSize: 18, fontWeight: 'bold', color: '#ffffff' },
+    statUnit: { fontSize: 12, fontWeight: 'normal', color: '#888888' }
 });

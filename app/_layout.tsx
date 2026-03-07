@@ -53,7 +53,7 @@ export default function RootLayout() {
 
   if (!initialized) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center' }}>
+      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#0f0f0f' }}>
         <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
@@ -62,7 +62,7 @@ export default function RootLayout() {
   // 3. Den Stack mit dem QueryClientProvider umschließen
   return (
     <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0f0f0f' } }}>
         <Stack.Screen name="auth" />
         <Stack.Screen name="tabs" />
         <Stack.Screen 
@@ -70,11 +70,26 @@ export default function RootLayout() {
           options={{ 
             headerShown: true, 
             presentation: 'modal', 
-            title: 'Mein Profil' 
+            title: 'Mein Profil',
+            headerStyle: { backgroundColor: '#1a1a1a' },
+            headerTintColor: '#ffffff',
+            headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
           }} 
         />
-        <Stack.Screen name="wellness_modal" options={{ presentation: 'modal', title: 'Wellness Log' }} />
-        <Stack.Screen name="training_modal" options={{ presentation: 'modal', title: 'Training Log' }} />
+        <Stack.Screen name="wellness_modal" options={{ 
+          presentation: 'modal', 
+          title: 'Wellness Log',
+          headerStyle: { backgroundColor: '#1a1a1a' },
+          headerTintColor: '#ffffff',
+          headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
+        }} />
+        <Stack.Screen name="training_modal" options={{ 
+          presentation: 'modal', 
+          title: 'Training Log',
+          headerStyle: { backgroundColor: '#1a1a1a' },
+          headerTintColor: '#ffffff',
+          headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
+        }} />
       </Stack>
     </QueryClientProvider>
   );
