@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 import { calculateReadiness } from '../lib/calculations';
@@ -8,37 +7,7 @@ import { fetchFitbitWellnessData } from '../lib/fitbit_sync';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDashboardData } from '../hooks/useDashboardData';
-
-// 1. Isolierte Slider-Komponente (Memoized gegen Ruckeln)
-const SliderGroup = memo(({ label, initialValue, onValueChange, color }: any) => {
-  const [displayValue, setDisplayValue] = useState(initialValue);
-
-  // Sync displayValue when initialValue changes (e.g., when Fitbit data loads)
-  useEffect(() => {
-    setDisplayValue(initialValue);
-  }, [initialValue]);
-
-  return (
-    <View style={styles.inputGroup}>
-      <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={[styles.valueText, { color }]}>{Math.round(displayValue)}/10</Text>
-      </View>
-      <Slider 
-        style={styles.slider}
-        minimumValue={1} 
-        maximumValue={10}
-        step={1}
-        value={initialValue} 
-        onValueChange={(v) => setDisplayValue(v)}
-        onSlidingComplete={(v) => onValueChange(v)}
-        minimumTrackTintColor={color}
-        thumbTintColor={color}
-        tapToSeek={true}
-      />
-    </View>
-  );
-});
+import ColorGradientSlider from '../components/ColorGradientSlider';
 
 export default function WellnessModal() {
   const router = useRouter();
@@ -167,12 +136,12 @@ async function saveWellness() {
         )}
       </View>
       
-      <SliderGroup label="Stimmung" initialValue={mood} onValueChange={handleMood} color="#FFD700" />
-      <SliderGroup label="Erholung" initialValue={recovery} onValueChange={handleRecovery} color="#4CAF50" />
-      <SliderGroup label="Körperliches Gefühl" initialValue={physical} onValueChange={handlePhysical} color="#FF5722" />
-      <SliderGroup label="Gesundheit" initialValue={health} onValueChange={handleHealth} color="#2196F3" />
-      <SliderGroup label="Stresslevel" initialValue={stress} onValueChange={handleStress} color="#F44336" />
-      <SliderGroup label="Schlafqualität" initialValue={sleepQuality} onValueChange={handleSleep} color="#9C27B0" />
+      <ColorGradientSlider label="Stimmung" initialValue={mood} onValueChange={handleMood} />
+      <ColorGradientSlider label="Erholung" initialValue={recovery} onValueChange={handleRecovery} />
+      <ColorGradientSlider label="Körperliches Gefühl" initialValue={physical} onValueChange={handlePhysical} />
+      <ColorGradientSlider label="Gesundheit" initialValue={health} onValueChange={handleHealth} />
+      <ColorGradientSlider label="Stresslevel" initialValue={stress} onValueChange={handleStress} isReversed={true} />
+      <ColorGradientSlider label="Schlafqualität" initialValue={sleepQuality} onValueChange={handleSleep} />
 
       <View style={styles.row}>
         <TouchableOpacity 
@@ -197,12 +166,12 @@ async function saveWellness() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 25, backgroundColor: '#1a1a1a', paddingBottom: 60, paddingTop: 60 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#ffffff' },
+  container: { padding: 25, backgroundColor: '#1a1a1a', paddingBottom: 40, paddingTop: 40 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 12, textAlign: 'center', color: '#ffffff' },
   fitbitInfoBox: { 
     height: 55,
     flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, 
-    marginBottom: 25, gap: 10, borderWidth: 1 
+    marginBottom: 15, gap: 10, borderWidth: 1 
   },
   fitbitSuccess: { backgroundColor: '#1a3a1a', borderColor: '#4CAF50' },
   fitbitMissing: { backgroundColor: '#3a2a1a', borderColor: '#FF9800' },
@@ -211,8 +180,7 @@ const styles = StyleSheet.create({
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   label: { fontSize: 16, fontWeight: '600', color: '#ffffff' },
   valueText: { fontWeight: 'bold', fontSize: 16 },
-  slider: { width: '100%', height: 40 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 20, gap: 10 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 12, gap: 10 },
   toggleButton: { flex: 1, padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#333333', alignItems: 'center', backgroundColor: '#2a2a2a' },
   toggleText: { fontWeight: '600', color: '#ffffff' },
   sickActive: { backgroundColor: '#3a1a1a', borderColor: '#F44336' },

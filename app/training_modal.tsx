@@ -1,36 +1,10 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView, ActivityIndicator } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-// 1. TanStack Query importieren
 import { useQueryClient } from '@tanstack/react-query';
-
-const SliderGroup = memo(({ label, initialValue, onValueChange, color }: any) => {
-  const [displayValue, setDisplayValue] = useState(initialValue);
-
-  return (
-    <View style={styles.inputGroup}>
-      <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={[styles.valueText, { color }]}>{Math.round(displayValue)}/10</Text>
-      </View>
-      <Slider 
-        style={styles.slider}
-        minimumValue={1} 
-        maximumValue={10} 
-        step={1}
-        value={initialValue} 
-        onValueChange={(v) => setDisplayValue(v)}
-        onSlidingComplete={(v) => onValueChange(v)}
-        minimumTrackTintColor={color} 
-        thumbTintColor={color}
-        tapToSeek={true}
-      />
-    </View>
-  );
-});
+import ColorGradientSlider from '../components/ColorGradientSlider';
 
 export default function TrainingModal() {
   const router = useRouter();
@@ -123,18 +97,18 @@ export default function TrainingModal() {
         />
       </View>
 
-      <SliderGroup 
-        label="Muskuläre Belastung (RPE)" 
-        initialValue={muscularEffort} 
-        onValueChange={handleMuscularChange} 
-        color="#FF5722" 
+      <ColorGradientSlider
+        label="Muskuläre Belastung (RPE)"
+        initialValue={muscularEffort}
+        onValueChange={handleMuscularChange}
+        isReversed={true}
       />
       
-      <SliderGroup 
-        label="Atmung / Puls (RPE)" 
-        initialValue={respirationEffort} 
-        onValueChange={handleRespirationChange} 
-        color="#03A9F4" 
+      <ColorGradientSlider
+        label="Atmung / Puls (RPE)"
+        initialValue={respirationEffort}
+        onValueChange={handleRespirationChange}
+        isReversed={true}
       />
 
       <View style={styles.inputGroup}>
@@ -165,15 +139,15 @@ export default function TrainingModal() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 25, backgroundColor: '#1a1a1a', paddingBottom: 40, paddingTop: 60 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#ffffff' },
+  container: { padding: 25, backgroundColor: '#1a1a1a', paddingBottom: 40, paddingTop: 40 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 12, textAlign: 'center', color: '#ffffff' },
   
   loadPreviewCard: {
     backgroundColor: '#2a2a2a',
     padding: 15,
     borderRadius: 15,
     alignItems: 'center',
-    marginBottom: 25,
+    marginBottom: 15,
     borderWidth: 1,
     borderColor: '#3a3a3a'
   },
@@ -182,18 +156,16 @@ const styles = StyleSheet.create({
   previewUnit: { fontSize: 16, fontWeight: '600', color: '#888888' },
 
   subTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12, color: '#ffffff' },
-  typeContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 25 },
+  typeContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 15 },
   typeButton: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 25, borderWidth: 1, borderColor: '#3a3a3a', backgroundColor: '#2a2a2a' },
   typeButtonActive: { backgroundColor: '#5856D6', borderColor: '#5856D6' },
   typeButtonText: { color: '#888888', fontWeight: '500' },
   typeButtonTextActive: { color: 'white', fontWeight: '700' },
 
-  inputGroup: { marginBottom: 20 },
+  inputGroup: { marginBottom: 15 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   label: { fontSize: 16, fontWeight: '600', color: '#ffffff' },
   valueText: { fontWeight: 'bold', fontSize: 16 },
-  slider: { width: '100%', height: 40 },
-  
   textInput: { backgroundColor: '#2a2a2a', borderWidth: 1, borderColor: '#3a3a3a', borderRadius: 12, padding: 14, fontSize: 16, color: '#ffffff', marginTop: 12 },
   textArea: { height: 80, textAlignVertical: 'top' },
   

@@ -76,6 +76,14 @@ export default function Dashboard() {
                   </View>
                 </View>
               </View>
+              {selectedDay && (
+                <View style={styles.selectedDayDisplay}>
+                  <Text style={styles.selectedDayLabel}>
+                    {new Date(selectedDay.date + 'T00:00:00').toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}
+                  </Text>
+                  <Text style={styles.selectedDayValue}>{Math.round(selectedDay.load)} pts</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.chartRow}>
@@ -86,7 +94,7 @@ export default function Dashboard() {
                     backgroundColor: day.load > 800 ? '#F44336' : '#5856D6', 
                     opacity: selectedDay ? (selectedDay.date === day.date ? 1 : 0.4) : 1 
                   }]} />
-                  <Text style={styles.barDate}>{day.date.split('-')[2]}</Text>
+                  <Text style={styles.barDate}>{parseInt(day.date.split('-')[2])}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -111,7 +119,7 @@ export default function Dashboard() {
 // Hier kommen deine Styles aus der alten Dashboard-Datei rein...
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#0f0f0f' },
-    scrollContent: { padding: 20, paddingTop: 60, paddingBottom: 40 },
+    scrollContent: { padding: 20, paddingTop: 20, paddingBottom: 40 },
     centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     dateText: { fontSize: 16, color: '#888888', marginBottom: 5, textAlign: 'center' },
     statusRow: { alignItems: 'center', marginBottom: 15 },
@@ -137,6 +145,9 @@ const styles = StyleSheet.create({
     totalLoadText: { fontSize: 22, fontWeight: '800', color: '#ffffff' },
     percentageBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, gap: 4 },
     percentageText: { fontSize: 12, fontWeight: '700' },
+    selectedDayDisplay: { alignItems: 'flex-end' },
+    selectedDayLabel: { fontSize: 12, color: '#888888', marginBottom: 4 },
+    selectedDayValue: { fontSize: 18, fontWeight: '800', color: '#5856D6' },
     detailsSection: { marginTop: 20 },
     sectionTitle: { fontSize: 18, fontWeight: '700', color: '#ffffff', marginBottom: 15 },
     statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
