@@ -5,12 +5,14 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import ColorGradientSlider from '../components/ColorGradientSlider';
+import { WorkoutType } from '../lib/workoutType';
+import { useWorkoutTypeContext } from '../lib/WorkoutTypeContext';
 
 export default function TrainingModal() {
   const router = useRouter();
   const queryClient = useQueryClient(); // 2. Query Client initialisieren
+  const { selectedWorkoutTypes } = useWorkoutTypeContext();
   
-  const [workoutType, setWorkoutType] = useState('Kraft');
   const [duration, setDuration] = useState('60');
   const [muscularEffort, setMuscularEffort] = useState(5);
   const [respirationEffort, setRespirationEffort] = useState(5);
@@ -19,6 +21,23 @@ export default function TrainingModal() {
 
   const handleMuscularChange = useCallback((v: number) => setMuscularEffort(v), []);
   const handleRespirationChange = useCallback((v: number) => setRespirationEffort(v), []);
+
+  const getWorkoutTypeLabel = (type: WorkoutType): string => {
+    const labels: { [key in WorkoutType]: string } = {
+      [WorkoutType.KRAFTTRAINING]: 'Krafttraining (Strength)',
+      [WorkoutType.CARDIO]: 'Cardio',
+      [WorkoutType.PLYOMETRICS]: 'Plyometrics',
+      [WorkoutType.SPIEL_SIMULATION]: 'Spiel Simulation',
+      [WorkoutType.TECHNISCHE_DRILLS]: 'Technische Drills',
+      [WorkoutType.WETTKAMPF]: 'Wettkampf (Competition)',
+      [WorkoutType.AUFWAERMEN]: 'Aufwärmen (Warm-up)',
+      [WorkoutType.MOBILITY]: 'Mobility',
+      [WorkoutType.DEHNEN]: 'Dehnen (Stretching)',
+      [WorkoutType.REGENERATION]: 'Regeneration',
+      [WorkoutType.PREHAB]: 'Prehab'
+    };
+    return labels[type] || 'Unknown';
+  };
 
   const durationInt = parseInt(duration) || 0;
   const previewLoad = Math.round(((muscularEffort + respirationEffort) / 2) * durationInt);
@@ -37,10 +56,16 @@ export default function TrainingModal() {
         return;
       }
 
+      if (selectedWorkoutTypes.length === 0) {
+        Alert.alert("Fehler", "Bitte wähle mindestens einen Trainingstyp aus.");
+        setIsSaving(false);
+        return;
+      }
+
       // 3. Training in Supabase speichern
       const { error } = await supabase.from('workout_logs').insert({
         user_id: user.id,
-        workout_type: workoutType,
+        workout_types: selectedWorkoutTypes,
         duration_minutes: durationInt,
         muscular_effort: muscularEffort,
         respiration_effort: respirationEffort,
@@ -74,17 +99,31 @@ export default function TrainingModal() {
       </View>
 
       <Text style={styles.subTitle}>Was hast du trainiert?</Text>
-      <View style={styles.typeContainer}>
-        {['Kraft', 'Cardio', 'Mobility', 'Wettkampf'].map((type) => (
-          <TouchableOpacity 
-            key={type} 
-            style={[styles.typeButton, workoutType === type && styles.typeButtonActive]}
-            onPress={() => setWorkoutType(type)}
-          >
-            <Text style={[styles.typeButtonText, workoutType === type && styles.typeButtonTextActive]}>{type}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <TouchableOpacity
+        style={styles.selectTypesButton}
+        onPress={() => router.push('/workout_type_selector')}
+      >
+        <Ionicons name="checkmark-circle" size={20} color="#5856D6" style={styles.selectTypesIcon} />
+        <View style={styles.selectTypesContent}>
+          <Text style={styles.selectTypesLabel}>Trainingstypen wählen</Text>
+          <Text style={styles.selectTypesValue}>
+            {selectedWorkoutTypes.length > 0 
+              ? `${selectedWorkoutTypes.length} ausgewählt` 
+              : 'Bitte auswählen'}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#888888" />
+      </TouchableOpacity>
+
+      {selectedWorkoutTypes.length > 0 && (
+        <View style={styles.selectedTypesContainer}>
+          {selectedWorkoutTypes.map((type) => (
+            <View key={type} style={styles.selectedTypeTag}>
+              <Text style={styles.selectedTypeTagText}>{getWorkoutTypeLabel(type)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Dauer (Minuten)</Text>
@@ -161,6 +200,54 @@ const styles = StyleSheet.create({
   typeButtonActive: { backgroundColor: '#5856D6', borderColor: '#5856D6' },
   typeButtonText: { color: '#888888', fontWeight: '500' },
   typeButtonTextActive: { color: 'white', fontWeight: '700' },
+
+  selectTypesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+    borderWidth: 1,
+    borderColor: '#3a3a3a',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    gap: 12
+  },
+  selectTypesIcon: {
+    marginRight: 4
+  },
+  selectTypesContent: {
+    flex: 1
+  },
+  selectTypesLabel: {
+    fontSize: 14,
+    color: '#888888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2
+  },
+  selectTypesValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff'
+  },
+  selectedTypesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 15
+  },
+  selectedTypeTag: {
+    backgroundColor: '#5856D6',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8
+  },
+  selectedTypeTagText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#ffffff'
+  },
 
   inputGroup: { marginBottom: 15 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },

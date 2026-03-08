@@ -6,6 +6,7 @@ import { Session } from '@supabase/supabase-js';
 import { ActivityIndicator, View } from 'react-native';
 // 1. TanStack Query Imports
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { WorkoutTypeProvider } from '../lib/WorkoutTypeContext';
 
 // 2. Query Client instanziieren (außerhalb der Komponente)
 const queryClient = new QueryClient({
@@ -62,35 +63,47 @@ export default function RootLayout() {
   // 3. Den Stack mit dem QueryClientProvider umschließen
   return (
     <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0f0f0f' } }}>
-        <Stack.Screen name="auth" />
-        <Stack.Screen name="tabs" />
-        <Stack.Screen 
-          name="profile" 
-          options={{ 
-            headerShown: true, 
+      <WorkoutTypeProvider>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0f0f0f' } }}>
+          <Stack.Screen name="auth" />
+          <Stack.Screen name="tabs" />
+          <Stack.Screen 
+            name="profile" 
+            options={{ 
+              headerShown: true, 
+              presentation: 'modal', 
+              title: 'Mein Profil',
+              headerStyle: { backgroundColor: '#1a1a1a' },
+              headerTintColor: '#ffffff',
+              headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
+            }} 
+          />
+          <Stack.Screen name="wellness_modal" options={{ 
             presentation: 'modal', 
-            title: 'Mein Profil',
+            title: 'Wellness Log',
             headerStyle: { backgroundColor: '#1a1a1a' },
             headerTintColor: '#ffffff',
             headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
-          }} 
-        />
-        <Stack.Screen name="wellness_modal" options={{ 
-          presentation: 'modal', 
-          title: 'Wellness Log',
-          headerStyle: { backgroundColor: '#1a1a1a' },
-          headerTintColor: '#ffffff',
-          headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
-        }} />
-        <Stack.Screen name="training_modal" options={{ 
-          presentation: 'modal', 
-          title: 'Training Log',
-          headerStyle: { backgroundColor: '#1a1a1a' },
-          headerTintColor: '#ffffff',
-          headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
-        }} />
-      </Stack>
+          }} />
+          <Stack.Screen name="training_modal" options={{ 
+            presentation: 'modal', 
+            title: 'Training Log',
+            headerStyle: { backgroundColor: '#1a1a1a' },
+            headerTintColor: '#ffffff',
+            headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
+          }} />
+          <Stack.Screen 
+            name="workout_type_selector" 
+            options={{ 
+              presentation: 'modal', 
+              title: 'Trainingstypen',
+              headerStyle: { backgroundColor: '#1a1a1a' },
+              headerTintColor: '#ffffff',
+              headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
+            }} 
+          />
+        </Stack>
+      </WorkoutTypeProvider>
     </QueryClientProvider>
   );
 }
