@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase'; 
 import { Session } from '@supabase/supabase-js';
 import { ActivityIndicator, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 // 1. TanStack Query Imports
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WorkoutTypeProvider } from '../lib/WorkoutTypeContext';
@@ -62,9 +63,10 @@ export default function RootLayout() {
 
   // 3. Den Stack mit dem QueryClientProvider umschließen
   return (
-    <QueryClientProvider client={queryClient}>
-      <WorkoutTypeProvider>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0f0f0f' } }}>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <WorkoutTypeProvider>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0f0f0f' } }}>
           <Stack.Screen name="auth" />
           <Stack.Screen name="tabs" />
           <Stack.Screen 
@@ -102,8 +104,9 @@ export default function RootLayout() {
               headerTitleStyle: { color: '#ffffff', fontWeight: 'bold' }
             }} 
           />
-        </Stack>
-      </WorkoutTypeProvider>
-    </QueryClientProvider>
+          </Stack>
+        </WorkoutTypeProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
