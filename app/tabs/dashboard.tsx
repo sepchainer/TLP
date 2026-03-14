@@ -87,7 +87,7 @@ export default function Dashboard() {
             </View>
 
             <View style={styles.chartRow}>
-              {data.weeklyLoadData.map((day, idx) => (
+              {data.weeklyLoadData.map((day: any, idx: any) => (
                 <TouchableOpacity key={idx} style={styles.barColumn} onPress={() => setSelectedDay(selectedDay?.date === day.date ? null : day)}>
                   <View style={[styles.bar, { 
                     height: Math.max(5, Math.min(day.load / 10, 80)), 
