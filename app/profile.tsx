@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest, ResponseType } from 'expo-auth-session';
 import { Ionicons } from '@expo/vector-icons';
-import { Buffer } from 'buffer';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -13,6 +12,18 @@ const discovery = {
   authorizationEndpoint: 'https://www.fitbit.com/oauth2/authorize',
   tokenEndpoint: 'https://api.fitbit.com/oauth2/token',
 };
+
+interface FitbitTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  tokens_stored?: boolean;
+}
+
+interface EdgeFunctionErrorPayload {
+  error?: string;
+  errors?: Array<{ message?: string }>;
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -39,54 +50,38 @@ export default function ProfileScreen() {
   }, [response]);
 
   async function exchangeCodeForToken(code: string, codeVerifier: string | undefined) {
-    const credentials = Buffer.from(
-      `${process.env.EXPO_PUBLIC_FITBIT_CLIENT_ID}:${process.env.EXPO_PUBLIC_FITBIT_CLIENT_SECRET}`
-    ).toString('base64');
+    const redirectUri = makeRedirectUri({ scheme: 'tlp-app', path: 'expo-auth-session' });
+
+    if (!codeVerifier) {
+      Alert.alert('Fitbit Verbindung fehlgeschlagen', 'Code-Verifier fehlt für PKCE.');
+      return;
+    }
 
     try {
-      const tokenResponse = await fetch('https://api.fitbit.com/oauth2/token', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${credentials}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
+      const { data, error } = await supabase.functions.invoke<FitbitTokenResponse | EdgeFunctionErrorPayload>('exchange-fitbit-token', {
+        body: {
           grant_type: 'authorization_code',
-          code: code,
-          redirect_uri: makeRedirectUri({ scheme: 'tlp-app', path: 'expo-auth-session' }),
-          code_verifier: codeVerifier!,
-        }).toString(),
+          code,
+          redirect_uri: redirectUri,
+          code_verifier: codeVerifier,
+        },
       });
-      console.log(makeRedirectUri({ scheme: 'tlp-app', path: 'expo-auth-session' }));
 
-      const data = await tokenResponse.json();
-      
-      if (data.access_token) {
-        await saveTokensToSupabase(data);
+      if (error) {
+        throw error;
+      }
+
+      if (data && 'access_token' in data && data.access_token) {
+        Alert.alert('Erfolg', 'Fitbit ist jetzt verbunden!');
+      } else {
+        const message = data && 'error' in data && data.error
+          ? data.error
+          : 'Kein access_token von der Edge Function erhalten';
+        throw new Error(message);
       }
     } catch (error) {
       console.error("Token Exchange Error:", error);
-    }
-  }
-
-  async function saveTokensToSupabase(data: any) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + data.expires_in);
-
-    const { error } = await supabase.from('fitbit_tokens').upsert({
-      user_id: user.id,
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_at: expiresAt.toISOString(),
-    });
-
-    if (error) {
-      Alert.alert("Fehler beim Speichern", error.message);
-    } else {
-      Alert.alert("Erfolg", "Fitbit ist jetzt verbunden!");
+      Alert.alert('Fitbit Verbindung fehlgeschlagen', 'Token konnte nicht ausgetauscht werden.');
     }
   }
 

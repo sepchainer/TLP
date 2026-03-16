@@ -1,73 +1,65 @@
 // libs/fitbit_sync.ts
 import { supabase } from './supabase';
-import { Buffer } from 'buffer';
+
+interface FitbitTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  tokens_stored?: boolean;
+  token_refreshed?: boolean;
+}
+
+interface FitbitNotConnectedResponse {
+  connected: false;
+  token_refreshed: false;
+  reason: 'not_connected' | 'reauthorization_required';
+}
+
+interface FitbitErrorPayload {
+  error?: string;
+  errors?: Array<{ message?: string }>;
+}
+
+type FitbitLookupResponse = FitbitTokenResponse | FitbitNotConnectedResponse | FitbitErrorPayload;
+
+function hasAccessToken(payload: FitbitLookupResponse | null): payload is FitbitTokenResponse {
+  return !!payload && 'access_token' in payload && typeof payload.access_token === 'string';
+}
+
+function isNotConnected(payload: FitbitLookupResponse | null): payload is FitbitNotConnectedResponse {
+  return !!payload && 'connected' in payload && payload.connected === false;
+}
 
 export async function getValidFitbitToken(userId: string) {
-  const { data: tokenData, error } = await supabase
-    .from('fitbit_tokens')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-
-  if (error || !tokenData) {
-    console.error("Kein Token in DB gefunden");
-    return null;
-  }
-
-  // Sicherere Zeitprüfung
-  const now = Date.now();
-  const expiresAt = new Date(tokenData.expires_at).getTime();
-  const buffer = 5 * 60 * 1000; // 5 Minuten Puffer
-
-  // Wenn noch gültig, direkt zurückgeben
-  if (now < (expiresAt - buffer)) {
-    return tokenData.access_token;
-  }
-
-  // REFRESH LOGIK
-  console.log("Fitbit Token abgelaufen. Starte Refresh...");
-  
-  const credentials = Buffer.from(
-    `${process.env.EXPO_PUBLIC_FITBIT_CLIENT_ID}:${process.env.EXPO_PUBLIC_FITBIT_CLIENT_SECRET}`
-  ).toString('base64');
+  void userId;
 
   try {
-    const response = await fetch('https://api.fitbit.com/oauth2/token', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${credentials}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: tokenData.refresh_token,
-      }).toString(),
-    });
-
-    const newData = await response.json();
-
-    // WICHTIG: Prüfen ob Fitbit einen Fehler meldet (z.B. invalid_grant)
-    if (newData.errors || !newData.access_token) {
-      console.error("Fitbit Refresh Fehler Antwort:", newData.errors);
-      return null; 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      return null;
     }
 
-    // Neue Ablaufzeit berechnen (expires_in ist in Sekunden)
-    const newExpiresAt = new Date(Date.now() + newData.expires_in * 1000).toISOString();
+    const { data: newData, error: refreshError } = await supabase.functions.invoke<FitbitLookupResponse>('exchange-fitbit-token', {
+      body: {
+        grant_type: 'get_access_token',
+      },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
 
-    const { error: updateError } = await supabase
-      .from('fitbit_tokens')
-      .update({
-        access_token: newData.access_token,
-        refresh_token: newData.refresh_token, // Wichtig: Fitbit rotiert meistens den Refresh-Token!
-        expires_at: newExpiresAt,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', userId);
-
-    if (updateError) {
-      console.error("Fehler beim Speichern in Supabase:", updateError);
+    if (refreshError) {
+      console.warn('Fitbit Token Lookup nicht erfolgreich (Edge Function non-2xx).');
       return null;
+    }
+
+    if (isNotConnected(newData ?? null)) {
+      return null;
+    }
+
+    if (!hasAccessToken(newData)) {
+      console.error('Fitbit Token Fehler Antwort:', newData);
+      return null; 
     }
 
     return newData.access_token;
