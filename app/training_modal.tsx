@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabase';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import ColorGradientSlider from '../components/ColorGradientSlider';
@@ -10,6 +10,7 @@ import { useWorkoutTypeContext } from '../lib/WorkoutTypeContext';
 
 export default function TrainingModal() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ duration?: string; prefillNotes?: string; fitbitStartTime?: string; fitbitLogId?: string }>();
   const queryClient = useQueryClient(); // 2. Query Client initialisieren
   const { selectedWorkoutTypes } = useWorkoutTypeContext();
   
@@ -18,6 +19,31 @@ export default function TrainingModal() {
   const [respirationEffort, setRespirationEffort] = useState(5);
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (typeof params.duration === 'string') {
+      const parsed = Math.max(1, Math.round(Number(params.duration) || 0));
+      if (parsed > 0) {
+        setDuration(String(parsed));
+      }
+    }
+
+    const startTime = typeof params.fitbitStartTime === 'string' ? params.fitbitStartTime : null;
+    const startText = startTime
+      ? new Date(startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+      : null;
+    const noteFromParams = typeof params.prefillNotes === 'string' ? params.prefillNotes : '';
+
+    if (noteFromParams || startText) {
+      const withTime = startText && !noteFromParams.includes('Start:')
+        ? `${noteFromParams}${noteFromParams ? ' | ' : ''}Start: ${startText}`
+        : noteFromParams;
+
+      if (withTime) {
+        setNotes(withTime);
+      }
+    }
+  }, [params.duration, params.prefillNotes, params.fitbitStartTime]);
 
   const handleMuscularChange = useCallback((v: number) => setMuscularEffort(v), []);
   const handleRespirationChange = useCallback((v: number) => setRespirationEffort(v), []);
@@ -42,6 +68,8 @@ export default function TrainingModal() {
   const durationInt = parseInt(duration) || 0;
   const previewLoad = Math.round(((muscularEffort + respirationEffort) / 2) * durationInt);
 
+  const linkedFitbitLogId = typeof params.fitbitLogId === 'string' ? params.fitbitLogId.trim() : '';
+
   async function saveWorkout() {
     if (isSaving) return;
     setIsSaving(true);
@@ -63,6 +91,12 @@ export default function TrainingModal() {
       }
 
       // 3. Training in Supabase speichern
+      const fitbitMarker = linkedFitbitLogId ? `[fitbit_log_id:${linkedFitbitLogId}]` : '';
+      const normalizedNotes = notes.trim();
+      const finalNotes = fitbitMarker && !normalizedNotes.includes(fitbitMarker)
+        ? `${normalizedNotes}${normalizedNotes ? '\n' : ''}${fitbitMarker}`
+        : normalizedNotes;
+
       const { error } = await supabase.from('workout_logs').insert({
         user_id: user.id,
         workout_types: selectedWorkoutTypes,
@@ -70,7 +104,7 @@ export default function TrainingModal() {
         muscular_effort: muscularEffort,
         respiration_effort: respirationEffort,
         calculated_load: previewLoad,
-        notes: notes,
+        notes: finalNotes,
         date: new Date().toISOString().split('T')[0]
       });
 

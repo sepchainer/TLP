@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import { fetchFitbitWellnessData } from '../lib/fitbit_sync';
+import { fetchFitbitWellnessData, fetchFitbitWorkouts } from '../lib/fitbit_sync';
 import { calculateReadiness } from '../lib/calculations';
 import { getIsoDate, formatGermanDate } from '../utils/dateHelpers';
 
@@ -8,6 +8,15 @@ export function useDashboardData() {
   return useQuery({
     queryKey: ['dashboardData'],
     queryFn: async () => {
+      const fitbitMarkerRegex = /\[fitbit_log_id:([^\]]+)\]/g;
+      const extractFitbitIds = (note: string | null | undefined): string[] => {
+        if (!note) return [];
+        const matches = Array.from(note.matchAll(fitbitMarkerRegex));
+        return matches
+          .map((match) => (match[1] || '').trim())
+          .filter((id) => !!id);
+      };
+
       const today = getIsoDate(0);
       const sixDaysAgoStr = getIsoDate(6);
       const thirteenDaysAgoStr = getIsoDate(13);
@@ -16,12 +25,18 @@ export function useDashboardData() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Nicht eingeloggt");
 
-      const [wellnessToday, wellnessHistory, workouts14d, fitbitRealtime] = await Promise.all([
+      const [wellnessToday, wellnessHistory, workouts14d, fitbitRealtime, fitbitWorkouts, todayWorkoutNotes] = await Promise.all([
         supabase.from('wellness_logs').select('*').eq('user_id', user.id).eq('date', today).single(),
         supabase.from('wellness_logs').select('hrv, resting_hr').eq('user_id', user.id).gte('date', thirtyDaysAgoStr),
         supabase.from('workout_logs').select('date, calculated_load').eq('user_id', user.id).gte('date', thirteenDaysAgoStr),
-        fetchFitbitWellnessData(user.id)
+        fetchFitbitWellnessData(user.id),
+        fetchFitbitWorkouts(user.id),
+        supabase.from('workout_logs').select('notes').eq('user_id', user.id).eq('date', today)
       ]);
+
+      const linkedFitbitWorkoutIds = Array.from(
+        new Set((todayWorkoutNotes.data || []).flatMap((entry) => extractFitbitIds(entry.notes)))
+      );
 
       const workouts = workouts14d.data || [];
       const currentLoad = workouts.filter(w => w.date === today).reduce((s, i) => s + (i.calculated_load || 0), 0);
@@ -61,10 +76,14 @@ export function useDashboardData() {
       }
 
       return {
+        userId: user.id,
+        today,
         hasLoggedToday,
         readinessScore: finalReadinessScore,
         todayLoad: currentLoad,
         fitbitData: fitbitRealtime,
+        fitbitWorkouts,
+        linkedFitbitWorkoutIds,
         weeklyLoadData: trend,
         currentWeekTotal: thisWeekTotal,
         total14dLoad, // <--- Jetzt für das Modal verfügbar

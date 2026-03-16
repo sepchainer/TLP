@@ -1,18 +1,101 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { ReadinessGauge } from '../../components/dashboard/ReadinessGauge';
 import { StatCard } from '../../components/dashboard/StatCard';
 import { formatGermanDate } from '../../utils/dateHelpers';
+
+const IGNORED_WORKOUTS_KEY_PREFIX = 'fitbit_ignored_workouts';
+
+function getIgnoredKey(userId: string, date: string): string {
+  return `${IGNORED_WORKOUTS_KEY_PREFIX}:${userId}:${date}`;
+}
+
+function formatWorkoutTime(isoDateTime: string): string {
+  const d = new Date(isoDateTime);
+  if (Number.isNaN(d.getTime())) return '--:--';
+  return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+}
 
 export default function Dashboard() {
   // isLoading: Erster Load (keine Daten im Cache)
   // isRefetching: Update im Hintergrund
   const { data, isLoading, refetch } = useDashboardData();
   const [selectedDay, setSelectedDay] = useState<{date: string, load: number} | null>(null);
+  const [ignoredWorkoutIds, setIgnoredWorkoutIds] = useState<string[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    async function loadIgnoredIds() {
+      if (!data?.userId || !data?.today) {
+        setIgnoredWorkoutIds([]);
+        return;
+      }
+
+      try {
+        const key = getIgnoredKey(data.userId, data.today);
+        const raw = await SecureStore.getItemAsync(key);
+        if (!raw) {
+          setIgnoredWorkoutIds([]);
+          return;
+        }
+
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setIgnoredWorkoutIds(parsed.filter((id) => typeof id === 'string'));
+          return;
+        }
+
+        setIgnoredWorkoutIds([]);
+      } catch {
+        setIgnoredWorkoutIds([]);
+      }
+    }
+
+    loadIgnoredIds();
+  }, [data?.userId, data?.today]);
+
+  const visibleFitbitWorkouts = useMemo(() => {
+    if (!data?.fitbitWorkouts) return [];
+    const linkedIds = Array.isArray(data.linkedFitbitWorkoutIds) ? data.linkedFitbitWorkoutIds : [];
+
+    return data.fitbitWorkouts.filter((workout) => {
+      return !ignoredWorkoutIds.includes(workout.fitbitLogId) && !linkedIds.includes(workout.fitbitLogId);
+    });
+  }, [data?.fitbitWorkouts, data?.linkedFitbitWorkoutIds, ignoredWorkoutIds]);
+
+  async function handleIgnoreWorkout(fitbitLogId: string) {
+    if (!data?.userId || !data?.today) return;
+
+    const next = Array.from(new Set([...ignoredWorkoutIds, fitbitLogId]));
+    setIgnoredWorkoutIds(next);
+
+    try {
+      const key = getIgnoredKey(data.userId, data.today);
+      await SecureStore.setItemAsync(key, JSON.stringify(next));
+    } catch {
+      // Ignore persistence failures to keep UI responsive.
+    }
+  }
+
+  function handleLinkWorkout(workout: any) {
+    const startTime = formatWorkoutTime(workout.startTime);
+    const durationMinutes = Math.max(1, Math.round(workout.durationMinutes || 0));
+    const prefillNotes = `Fitbit: ${workout.activityName} | Start: ${startTime}`;
+
+    router.push({
+      pathname: '/training_modal',
+      params: {
+        duration: String(durationMinutes),
+        fitbitStartTime: workout.startTime,
+        fitbitLogId: workout.fitbitLogId,
+        prefillNotes,
+      },
+    });
+  }
 
   if (isLoading) return (
     <View style={styles.centered}><ActivityIndicator size="large" color="#007AFF" /></View>
@@ -38,6 +121,37 @@ export default function Dashboard() {
         
         <View style={styles.mainContent}>
           <ReadinessGauge score={data.readinessScore} />
+        </View>
+
+        <View style={styles.fitbitWorkoutSection}>
+          <Text style={styles.fitbitSectionTitle}>Trainings von deiner Uhr</Text>
+
+          {visibleFitbitWorkouts.length === 0 ? (
+            <View style={styles.fitbitEmptyCard}>
+              <Ionicons name="watch-outline" size={18} color="#888888" />
+              <Text style={styles.fitbitEmptyText}>Keine offenen Fitbit-Trainings von heute.</Text>
+            </View>
+          ) : (
+            visibleFitbitWorkouts.map((workout: any) => (
+              <View key={workout.fitbitLogId} style={styles.fitbitWorkoutCard}>
+                <View style={styles.fitbitWorkoutInfo}>
+                  <Text style={styles.fitbitWorkoutName}>{workout.activityName}</Text>
+                  <Text style={styles.fitbitWorkoutMeta}>
+                    {formatWorkoutTime(workout.startTime)} Uhr | {Math.round(workout.durationMinutes)} min
+                  </Text>
+                </View>
+
+                <View style={styles.fitbitWorkoutActions}>
+                  <TouchableOpacity style={styles.ignoreButton} onPress={() => handleIgnoreWorkout(workout.fitbitLogId)}>
+                    <Text style={styles.ignoreButtonText}>Ignorieren</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.linkButton} onPress={() => handleLinkWorkout(workout)}>
+                    <Text style={styles.linkButtonText}>Link Training</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Buttons nutzen data.hasLoggedToday */}
@@ -128,6 +242,19 @@ const styles = StyleSheet.create({
     badgeWait: { backgroundColor: '#3a2a1a', borderColor: '#FF9800' },
     badgeText: { fontSize: 12, fontWeight: '600' },
     mainContent: { alignItems: 'center', justifyContent: 'center', marginVertical: 10 },
+    fitbitWorkoutSection: { marginTop: 8, marginBottom: 16, gap: 10 },
+    fitbitSectionTitle: { fontSize: 16, fontWeight: '700', color: '#ffffff', marginBottom: 2 },
+    fitbitEmptyCard: { backgroundColor: '#2a2a2a', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
+    fitbitEmptyText: { color: '#888888', fontSize: 13, fontWeight: '500' },
+    fitbitWorkoutCard: { backgroundColor: '#2a2a2a', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: '#3a3a3a', gap: 10 },
+    fitbitWorkoutInfo: { gap: 4 },
+    fitbitWorkoutName: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
+    fitbitWorkoutMeta: { color: '#aaaaaa', fontSize: 12, fontWeight: '500' },
+    fitbitWorkoutActions: { flexDirection: 'row', gap: 8 },
+    ignoreButton: { flex: 1, backgroundColor: '#3a2a1a', borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: '#FF9800' },
+    ignoreButtonText: { color: '#FFB74D', fontSize: 13, fontWeight: '700' },
+    linkButton: { flex: 1, backgroundColor: '#1f2a4a', borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: '#5C9CFF' },
+    linkButtonText: { color: '#9ec5ff', fontSize: 13, fontWeight: '700' },
     actionContainer: { marginTop: 10, marginBottom: 25, gap: 12 },
     logButton: { backgroundColor: '#007AFF', padding: 16, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
     trainingButton: { backgroundColor: '#5856D6' },

@@ -20,6 +20,31 @@ interface FitbitErrorPayload {
   errors?: Array<{ message?: string }>;
 }
 
+interface FitbitActivityListItem {
+  logId?: number;
+  activityName?: string;
+  startTime?: string;
+  duration?: number;
+  calories?: number;
+  activityTypeId?: number;
+  logType?: 'manual' | 'mobile_run' | 'tracker' | string;
+}
+
+interface FitbitActivityListResponse {
+  activities?: FitbitActivityListItem[];
+}
+
+export interface FitbitWorkout {
+  fitbitLogId: string;
+  activityName: string;
+  startTime: string;
+  startDate: string;
+  durationMs: number;
+  durationMinutes: number;
+  calories: number | null;
+  activityTypeId: number | null;
+}
+
 type FitbitLookupResponse = FitbitTokenResponse | FitbitNotConnectedResponse | FitbitErrorPayload;
 
 function hasAccessToken(payload: FitbitLookupResponse | null): payload is FitbitTokenResponse {
@@ -28,6 +53,24 @@ function hasAccessToken(payload: FitbitLookupResponse | null): payload is Fitbit
 
 function isNotConnected(payload: FitbitLookupResponse | null): payload is FitbitNotConnectedResponse {
   return !!payload && 'connected' in payload && payload.connected === false;
+}
+
+function getIsoDateString(date: Date): string {
+  const tzOffsetMs = date.getTimezoneOffset() * 60 * 1000;
+  const localDate = new Date(date.getTime() - tzOffsetMs);
+  return localDate.toISOString().split('T')[0];
+}
+
+function normalizeStartTime(startTime: string | undefined, fallbackDate: string): string {
+  if (!startTime) {
+    return `${fallbackDate}T00:00:00`;
+  }
+
+  if (startTime.includes('T')) {
+    return startTime;
+  }
+
+  return `${fallbackDate}T${startTime}`;
 }
 
 export async function getValidFitbitToken(userId: string) {
@@ -101,5 +144,56 @@ export async function fetchFitbitWellnessData(userId: string) {
   } catch (error) {
     console.error("Fitbit Fetch Error:", error);
     return null;
+  }
+}
+
+export async function fetchFitbitWorkouts(
+  userId: string
+): Promise<FitbitWorkout[]> {
+  const token = await getValidFitbitToken(userId);
+  if (!token) return [];
+
+  const now = new Date();
+  const todayStr = getIsoDateString(now);
+
+  try {
+    const response = await fetch(`https://api.fitbit.com/1/user/-/activities/date/${todayStr}.json`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      console.warn('Fitbit Workout Fetch nicht erfolgreich:', response.status);
+      return [];
+    }
+
+    const payload = (await response.json()) as FitbitActivityListResponse;
+    const activities = Array.isArray(payload.activities) ? payload.activities : [];
+
+    const workouts = activities
+      .filter((activity) => activity.logType !== 'manual')
+      .map((activity) => {
+        const startDateFallback = todayStr;
+        const normalizedStartTime = normalizeStartTime(activity.startTime, startDateFallback);
+        const startDate = normalizedStartTime.split('T')[0] || startDateFallback;
+        const durationMs = typeof activity.duration === 'number' ? activity.duration : 0;
+
+        return {
+          fitbitLogId: String(activity.logId ?? ''),
+          activityName: activity.activityName?.trim() || 'Workout',
+          startTime: normalizedStartTime,
+          startDate,
+          durationMs,
+          durationMinutes: Math.max(1, Math.round((durationMs / 60000) * 10) / 10),
+          calories: typeof activity.calories === 'number' ? activity.calories : null,
+          activityTypeId: typeof activity.activityTypeId === 'number' ? activity.activityTypeId : null,
+        } as FitbitWorkout;
+      })
+      .filter((activity) => !!activity.fitbitLogId && activity.startDate === todayStr)
+      .sort((a, b) => (a.startTime < b.startTime ? 1 : -1));
+
+    return workouts;
+  } catch (error) {
+    console.error('Fitbit Workout Fetch Error:', error);
+    return [];
   }
 }

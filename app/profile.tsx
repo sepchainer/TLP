@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, Button, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Button, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -25,8 +25,19 @@ interface EdgeFunctionErrorPayload {
   errors?: Array<{ message?: string }>;
 }
 
+interface FitbitDisconnectedResponse {
+  connected: false;
+  token_refreshed: false;
+  reason: 'not_connected' | 'reauthorization_required';
+}
+
+type FitbitLookupResponse = FitbitTokenResponse | FitbitDisconnectedResponse | EdgeFunctionErrorPayload;
+
 export default function ProfileScreen() {
   const router = useRouter();
+  const [fitbitConnected, setFitbitConnected] = useState<boolean | null>(null);
+  const [fitbitDisconnectReason, setFitbitDisconnectReason] = useState<'not_connected' | 'reauthorization_required' | null>(null);
+  const [isCheckingFitbit, setIsCheckingFitbit] = useState(true);
 
   // --- Fitbit Auth Request ---
   const [request, response, promptAsync] = useAuthRequest(
@@ -43,11 +54,48 @@ export default function ProfileScreen() {
   );
 
   useEffect(() => {
+    checkFitbitStatus();
+  }, []);
+
+  useEffect(() => {
     if (response?.type === 'success') {
       const { code } = response.params;
       exchangeCodeForToken(code, request?.codeVerifier);
     }
   }, [response]);
+
+  async function checkFitbitStatus() {
+    setIsCheckingFitbit(true);
+    try {
+      const { data, error } = await supabase.functions.invoke<FitbitLookupResponse>('exchange-fitbit-token', {
+        body: {
+          grant_type: 'get_access_token',
+        },
+      });
+
+      if (error) {
+        setFitbitConnected(false);
+        setFitbitDisconnectReason('not_connected');
+        return;
+      }
+
+      const isConnected = !!data && 'access_token' in data && typeof data.access_token === 'string';
+      setFitbitConnected(isConnected);
+      if (isConnected) {
+        setFitbitDisconnectReason(null);
+      } else if (data && 'reason' in data && data.reason) {
+        setFitbitDisconnectReason(data.reason);
+      } else {
+        setFitbitDisconnectReason('not_connected');
+      }
+    } catch (error) {
+      console.error('Fitbit Status Check Error:', error);
+      setFitbitConnected(false);
+      setFitbitDisconnectReason('not_connected');
+    } finally {
+      setIsCheckingFitbit(false);
+    }
+  }
 
   async function exchangeCodeForToken(code: string, codeVerifier: string | undefined) {
     const redirectUri = makeRedirectUri({ scheme: 'tlp-app', path: 'expo-auth-session' });
@@ -72,6 +120,8 @@ export default function ProfileScreen() {
       }
 
       if (data && 'access_token' in data && data.access_token) {
+        setFitbitConnected(true);
+        setFitbitDisconnectReason(null);
         Alert.alert('Erfolg', 'Fitbit ist jetzt verbunden!');
       } else {
         const message = data && 'error' in data && data.error
@@ -95,14 +145,34 @@ export default function ProfileScreen() {
 
       <View style={styles.section}>
         <Text style={styles.subtitle}>Verbindungen</Text>
-        <TouchableOpacity 
-          style={styles.fitbitButton} 
-          onPress={() => promptAsync()}
-          disabled={!request}
-        >
-          <Ionicons name="logo-foursquare" size={20} color="white" />
-          <Text style={styles.buttonText}>Mit Fitbit verbinden</Text>
-        </TouchableOpacity>
+
+        {isCheckingFitbit ? (
+          <View style={styles.statusCard}>
+            <ActivityIndicator size="small" color="#00B0B9" />
+            <Text style={styles.statusText}>Fitbit Status wird geprüft...</Text>
+          </View>
+        ) : fitbitConnected ? (
+          <View style={[styles.statusCard, styles.connectedCard]}>
+            <Ionicons name="checkmark-circle" size={20} color="#2e7d32" />
+            <Text style={[styles.statusText, styles.connectedText]}>Fitbit verbunden</Text>
+          </View>
+        ) : (
+          <View style={styles.disconnectedContainer}>
+            {fitbitDisconnectReason === 'reauthorization_required' && (
+              <Text style={styles.reconnectHint}>Fitbit Verbindung abgelaufen. Bitte neu verbinden.</Text>
+            )}
+            <TouchableOpacity
+              style={styles.fitbitButton}
+              onPress={() => promptAsync()}
+              disabled={!request}
+            >
+              <Ionicons name="logo-foursquare" size={20} color="white" />
+              <Text style={styles.buttonText}>
+                {fitbitDisconnectReason === 'reauthorization_required' ? 'Fitbit neu verbinden' : 'Mit Fitbit verbinden'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -126,6 +196,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center', 
     gap: 10 
+  },
+  disconnectedContainer: {
+    gap: 10,
+  },
+  reconnectHint: {
+    color: '#FFB74D',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  statusCard: {
+    backgroundColor: '#1f1f1f',
+    borderRadius: 12,
+    padding: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  connectedCard: {
+    backgroundColor: '#1a3a1a',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  statusText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  connectedText: {
+    color: '#4CAF50',
   },
   buttonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
   footer: { marginTop: 'auto', gap: 10, paddingBottom: 20 }
