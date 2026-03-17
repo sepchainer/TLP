@@ -34,6 +34,18 @@ interface FitbitActivityListResponse {
   activities?: FitbitActivityListItem[];
 }
 
+interface FitbitHeartRateDayValue {
+  restingHeartRate?: number;
+}
+
+interface FitbitHeartRateDay {
+  value?: FitbitHeartRateDayValue;
+}
+
+interface FitbitHeartRateResponse {
+  'activities-heart'?: FitbitHeartRateDay[];
+}
+
 export interface FitbitWorkout {
   fitbitLogId: string;
   activityName: string;
@@ -116,7 +128,8 @@ export async function fetchFitbitWellnessData(userId: string) {
   const token = await getValidFitbitToken(userId);
   if (!token) return null;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getIsoDateString(new Date());
+  const yesterday = getIsoDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
 
   try {
     // 1. HRV abrufen (Fitbit liefert RMSSD)
@@ -131,15 +144,35 @@ export async function fetchFitbitWellnessData(userId: string) {
     });
     const sleepData = await sleepRes.json();
 
+    // 3. Ruhepuls abrufen (heute, fallback gestern)
+    const heartTodayRes = await fetch(`https://api.fitbit.com/1/user/-/activities/heart/date/${today}/1d.json`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const heartTodayData = (await heartTodayRes.json()) as FitbitHeartRateResponse;
+
+    let restingHr = heartTodayData?.['activities-heart']?.[0]?.value?.restingHeartRate ?? null;
+
+    if (restingHr == null) {
+      const heartYesterdayRes = await fetch(`https://api.fitbit.com/1/user/-/activities/heart/date/${yesterday}/1d.json`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const heartYesterdayData = (await heartYesterdayRes.json()) as FitbitHeartRateResponse;
+      restingHr = heartYesterdayData?.['activities-heart']?.[0]?.value?.restingHeartRate ?? null;
+    }
+
     // Daten extrahieren (Fitbit Pfade sind etwas tief verschachtelt)
     const dailyHrv = hrvData?.hrv?.[0]?.value?.dailyRmssd || null;
     const sleepMinutes = sleepData?.summary?.totalMinutesAsleep || 0;
     const sleepHours = sleepMinutes > 0 ? (sleepMinutes / 60).toFixed(1) : null;
 
+    if (restingHr == null) {
+      restingHr = sleepData?.summary?.restingHeartRate || null;
+    }
+
     return {
       hrv: dailyHrv,
       sleepHours: sleepHours ? parseFloat(sleepHours) : null,
-      restingHr: sleepData?.summary?.restingHeartRate || null // Optional falls verfügbar
+      restingHr
     };
   } catch (error) {
     console.error("Fitbit Fetch Error:", error);

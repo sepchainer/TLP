@@ -60,16 +60,22 @@ export function useDashboardData() {
 
       let finalReadinessScore = 0;
       let hasLoggedToday = false;
+      const fallbackWellness = wellnessToday.data;
+      const resolvedFitbitData = {
+        hrv: fitbitRealtime?.hrv ?? fallbackWellness?.hrv ?? null,
+        sleepHours: fitbitRealtime?.sleepHours ?? fallbackWellness?.sleep_hours ?? null,
+        restingHr: fitbitRealtime?.restingHr ?? fallbackWellness?.resting_hr ?? null,
+      };
 
       if (wellnessToday.data) {
         hasLoggedToday = true;
         const data = wellnessToday.data;
-        const hrv = fitbitRealtime?.hrv || data.hrv;
-        const rhr = fitbitRealtime?.restingHr || data.resting_hr;
+        const hrv = fitbitRealtime?.hrv ?? data.hrv;
+        const rhr = fitbitRealtime?.restingHr ?? data.resting_hr;
 
         finalReadinessScore = calculateReadiness(
           { mood: data.mood, recovery: data.recovery, health: data.health_status, physical: data.physical, sleep: data.sleep, stress: data.stress, isSick: data.is_sick },
-          { hrv, restingHr: rhr, sleepHours: fitbitRealtime?.sleepHours || data.sleep_hours, baselineHrv: avgHrv, baselineRhr: avgRhr },
+          { hrv, restingHr: rhr, sleepHours: fitbitRealtime?.sleepHours ?? data.sleep_hours, baselineHrv: avgHrv, baselineRhr: avgRhr },
           currentLoad, 
           thisWeekTotal - currentLoad, 
           total14dLoad - currentLoad // pastThirteenDaysLoad
@@ -89,7 +95,7 @@ export function useDashboardData() {
         hasLoggedToday,
         readinessScore: finalReadinessScore,
         todayLoad: currentLoad,
-        fitbitData: fitbitRealtime,
+        fitbitData: resolvedFitbitData,
         fitbitWorkouts,
         linkedFitbitWorkoutIds,
         weeklyLoadData: trend,
