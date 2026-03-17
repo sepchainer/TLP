@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, useRef, memo } from 'react';
 import { View, Text, StyleSheet, PanResponder, Dimensions } from 'react-native';
 
 interface ColorGradientSliderProps {
@@ -8,102 +8,73 @@ interface ColorGradientSliderProps {
   isReversed?: boolean; // For stress: reversed so green is low, red is high
 }
 
-// Color mapping: 1 = dark red, 5 = yellow, 10 = mid-dark green (or reversed for stress)
+// Color mapping: 1 = red, 5 = yellow, 10 = green (or reversed for stress)
+// Uses HSL hue interpolation (0°→120°) for perceptually distinct steps at every value.
 const getColorForValue = (value: number, isReversed: boolean = false) => {
-  // Normalize value to 0-1
-  const normalized = (value - 1) / 9;
-  
-  // Dark red: rgb(178, 0, 0) | Yellow: rgb(255, 255, 0) | Mid-dark green: rgb(45, 122, 45)
-  const darkRed = { r: 178, g: 0, b: 0 };
-  const yellow = { r: 255, g: 255, b: 0 };
-  const midDarkGreen = { r: 45, g: 122, b: 45 };
-  
-  if (isReversed) {
-    // Reversed: LOW (1) = MID-DARK GREEN, MID (5) = YELLOW, HIGH (10) = DARK RED
-    if (normalized <= 0.5) {
-      // Mid-dark green (1) to Yellow (5)
-      const t = normalized * 2; // 0 to 1
-      const r = Math.round(midDarkGreen.r + (yellow.r - midDarkGreen.r) * t);
-      const g = Math.round(midDarkGreen.g + (yellow.g - midDarkGreen.g) * t);
-      const b = Math.round(midDarkGreen.b + (yellow.b - midDarkGreen.b) * t);
-      return `rgb(${r}, ${g}, ${b})`;
-    } else {
-      // Yellow (5) to Dark Red (10)
-      const t = (normalized - 0.5) * 2; // 0 to 1
-      const r = Math.round(yellow.r + (darkRed.r - yellow.r) * t);
-      const g = Math.round(yellow.g + (darkRed.g - yellow.g) * t);
-      const b = Math.round(yellow.b + (darkRed.b - yellow.b) * t);
-      return `rgb(${r}, ${g}, ${b})`;
-    }
-  } else {
-    // Normal: LOW (1) = DARK RED, MID (5) = YELLOW, HIGH (10) = MID-DARK GREEN
-    if (normalized <= 0.5) {
-      // Dark red (1) to Yellow (5)
-      const t = normalized * 2; // 0 to 1
-      const r = Math.round(darkRed.r + (yellow.r - darkRed.r) * t);
-      const g = Math.round(darkRed.g + (yellow.g - darkRed.g) * t);
-      const b = Math.round(darkRed.b + (yellow.b - darkRed.b) * t);
-      return `rgb(${r}, ${g}, ${b})`;
-    } else {
-      // Yellow (5) to Mid-dark green (10)
-      const t = (normalized - 0.5) * 2; // 0 to 1
-      const r = Math.round(yellow.r + (midDarkGreen.r - yellow.r) * t);
-      const g = Math.round(yellow.g + (midDarkGreen.g - yellow.g) * t);
-      const b = Math.round(yellow.b + (midDarkGreen.b - yellow.b) * t);
-      return `rgb(${r}, ${g}, ${b})`;
-    }
-  }
+  const normalized = (value - 1) / 9; // 0 to 1
+  const t = isReversed ? 1 - normalized : normalized;
+
+  // Hue: 0° = red, 60° = yellow, 120° = green — each step shifts ~13° for a clear colour change
+  const hue = Math.round(t * 120);
+  const saturation = 88;
+  // Lightness peaks slightly at yellow (perceptually brightest hue) and is darker at ends
+  const lightness = Math.round(40 + Math.sin(t * Math.PI) * 10);
+
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 };
 
 const ColorGradientSlider = memo(
   ({ label, initialValue, onValueChange, isReversed = false }: ColorGradientSliderProps) => {
     const [displayValue, setDisplayValue] = useState(initialValue);
-    const [trackLayout, setTrackLayout] = useState<any>(null);
+    // Ref to track the latest displayValue — avoids stale closure in panResponder release handler
+    const displayValueRef = useRef(initialValue);
+    // Ref to the track View for measuring absolute screen position (pageX)
+    const trackRef = useRef<View>(null);
+    const trackPageXRef = useRef<number>(0);
     const screenWidth = Dimensions.get('window').width;
     const TRACK_WIDTH = screenWidth - 50; // Full width minus padding and margins
     const THUMB_SIZE = 28;
     const TRACK_HEIGHT = 16;
 
-    // Handle touch anywhere on the slider (both track and thumb)
-    const handleTouchMove = useCallback((gestureState: any) => {
-      if (!trackLayout) return;
-
-      const touchX = gestureState.moveX;
-      const trackStartX = trackLayout.x;
-      const relativeX = Math.max(0, Math.min(TRACK_WIDTH, touchX - trackStartX));
-      const progress = relativeX / TRACK_WIDTH;
-      const newValue = Math.round(1 + progress * 9);
-      
+    const updateValue = useCallback((newValue: number) => {
       if (newValue >= 1 && newValue <= 10) {
+        displayValueRef.current = newValue;
         setDisplayValue(newValue);
       }
-    }, [trackLayout, TRACK_WIDTH]);
+    }, []);
 
-    const panResponder = PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (evt, gestureState) => {
-        handleTouchMove(gestureState);
-      },
-      onPanResponderRelease: () => {
-        onValueChange(displayValue);
-      },
-    });
+    // Called once the track is laid out — measure() gives absolute pageX on screen
+    const handleTrackLayout = useCallback(() => {
+      trackRef.current?.measure((_x, _y, _w, _h, pageX) => {
+        trackPageXRef.current = pageX;
+      });
+    }, []);
+
+    const panResponder = useRef(
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderMove: (evt, gestureState) => {
+          // gestureState.moveX is absolute screen X; subtract absolute track origin
+          const relativeX = Math.max(0, Math.min(TRACK_WIDTH, gestureState.moveX - trackPageXRef.current));
+          const newValue = Math.round(1 + (relativeX / TRACK_WIDTH) * 9);
+          updateValue(newValue);
+        },
+        onPanResponderRelease: () => {
+          onValueChange(displayValueRef.current);
+        },
+      })
+    ).current;
 
     const handleTrackPress = useCallback((evt: any) => {
       const { locationX } = evt.nativeEvent;
       const progress = Math.max(0, Math.min(1, locationX / TRACK_WIDTH));
       const newValue = Math.round(1 + progress * 9);
-      
       if (newValue >= 1 && newValue <= 10) {
-        setDisplayValue(newValue);
+        updateValue(newValue);
         onValueChange(newValue);
       }
-    }, [onValueChange, TRACK_WIDTH]);
-
-    const handleTrackLayout = useCallback((evt: any) => {
-      setTrackLayout(evt.nativeEvent.layout);
-    }, []);
+    }, [onValueChange, TRACK_WIDTH, updateValue]);
 
     const sliderColor = getColorForValue(displayValue, isReversed);
     
@@ -124,6 +95,7 @@ const ColorGradientSlider = memo(
         <View style={styles.sliderWrapper} {...panResponder.panHandlers}>
           {/* Track background */}
           <View 
+            ref={trackRef}
             style={[styles.track, { width: TRACK_WIDTH, height: TRACK_HEIGHT }]}
             onLayout={handleTrackLayout}
             onStartShouldSetResponder={() => true}

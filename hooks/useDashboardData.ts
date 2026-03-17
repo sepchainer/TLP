@@ -8,6 +8,11 @@ export function useDashboardData() {
   return useQuery({
     queryKey: ['dashboardData'],
     queryFn: async () => {
+      const toNumericLoad = (value: unknown): number => {
+        const n = typeof value === 'number' ? value : Number(value);
+        return Number.isFinite(n) ? n : 0;
+      };
+
       const fitbitMarkerRegex = /\[fitbit_log_id:([^\]]+)\]/g;
       const extractFitbitIds = (note: string | null | undefined): string[] => {
         if (!note) return [];
@@ -38,13 +43,16 @@ export function useDashboardData() {
         new Set((todayWorkoutNotes.data || []).flatMap((entry) => extractFitbitIds(entry.notes)))
       );
 
-      const workouts = workouts14d.data || [];
-      const currentLoad = workouts.filter(w => w.date === today).reduce((s, i) => s + (i.calculated_load || 0), 0);
-      const thisWeekTotal = workouts.filter(w => w.date >= sixDaysAgoStr).reduce((s, i) => s + (i.calculated_load || 0), 0);
-      const lastWeekTotal = workouts.filter(w => w.date >= thirteenDaysAgoStr && w.date < sixDaysAgoStr).reduce((s, i) => s + (i.calculated_load || 0), 0);
+      const workouts = (workouts14d.data || []).map((w) => ({
+        ...w,
+        numericLoad: toNumericLoad((w as any).calculated_load),
+      }));
+      const currentLoad = workouts.filter(w => w.date === today).reduce((s, i) => s + i.numericLoad, 0);
+      const thisWeekTotal = workouts.filter(w => w.date >= sixDaysAgoStr).reduce((s, i) => s + i.numericLoad, 0);
+      const lastWeekTotal = workouts.filter(w => w.date >= thirteenDaysAgoStr && w.date < sixDaysAgoStr).reduce((s, i) => s + i.numericLoad, 0);
       
       // NEU: Gesamte Last der letzten 14 Tage berechnen
-      const total14dLoad = workouts.reduce((s, i) => s + (i.calculated_load || 0), 0);
+      const total14dLoad = workouts.reduce((s, i) => s + i.numericLoad, 0);
 
       const history = wellnessHistory.data || [];
       const avgHrv = history.filter(h => h.hrv).reduce((s, i, _, a) => s + i.hrv! / a.length, 0) || 60;
@@ -71,7 +79,7 @@ export function useDashboardData() {
       const trend = [];
       for (let i = 6; i >= 0; i--) {
         const dStr = getIsoDate(i);
-        const load = workouts.filter(w => w.date === dStr).reduce((s, x) => s + x.calculated_load, 0);
+        const load = workouts.filter(w => w.date === dStr).reduce((s, x) => s + x.numericLoad, 0);
         trend.push({ date: dStr, load });
       }
 

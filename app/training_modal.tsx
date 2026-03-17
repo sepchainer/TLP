@@ -84,12 +84,6 @@ export default function TrainingModal() {
         return;
       }
 
-      if (selectedWorkoutTypes.length === 0) {
-        Alert.alert("Fehler", "Bitte wähle mindestens einen Trainingstyp aus.");
-        setIsSaving(false);
-        return;
-      }
-
       // 3. Training in Supabase speichern
       const fitbitMarker = linkedFitbitLogId ? `[fitbit_log_id:${linkedFitbitLogId}]` : '';
       const normalizedNotes = notes.trim();
@@ -132,7 +126,7 @@ export default function TrainingModal() {
         <Text style={styles.previewValue}>{previewLoad} <Text style={styles.previewUnit}>pts</Text></Text>
       </View>
 
-      <Text style={styles.subTitle}>Was hast du trainiert?</Text>
+      <Text style={styles.subTitle}>Was hast du trainiert? (optional)</Text>
       <TouchableOpacity
         style={styles.selectTypesButton}
         onPress={() => router.push('/workout_type_selector')}
@@ -143,7 +137,7 @@ export default function TrainingModal() {
           <Text style={styles.selectTypesValue}>
             {selectedWorkoutTypes.length > 0 
               ? `${selectedWorkoutTypes.length} ausgewählt` 
-              : 'Bitte auswählen'}
+              : 'Keine Auswahl'}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color="#888888" />

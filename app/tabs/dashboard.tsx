@@ -6,7 +6,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { ReadinessGauge } from '../../components/dashboard/ReadinessGauge';
 import { StatCard } from '../../components/dashboard/StatCard';
-import { formatGermanDate } from '../../utils/dateHelpers';
+import { WeeklyLoadBars, WeeklyLoadDay } from '../../components/dashboard/WeeklyLoadBars';
 
 const IGNORED_WORKOUTS_KEY_PREFIX = 'fitbit_ignored_workouts';
 
@@ -23,8 +23,8 @@ function formatWorkoutTime(isoDateTime: string): string {
 export default function Dashboard() {
   // isLoading: Erster Load (keine Daten im Cache)
   // isRefetching: Update im Hintergrund
-  const { data, isLoading, refetch } = useDashboardData();
-  const [selectedDay, setSelectedDay] = useState<{date: string, load: number} | null>(null);
+  const { data, isLoading } = useDashboardData();
+  const [selectedDay, setSelectedDay] = useState<WeeklyLoadDay | null>(null);
   const [ignoredWorkoutIds, setIgnoredWorkoutIds] = useState<string[]>([]);
   const router = useRouter();
 
@@ -200,18 +200,13 @@ export default function Dashboard() {
               )}
             </View>
 
-            <View style={styles.chartRow}>
-              {data.weeklyLoadData.map((day: any, idx: any) => (
-                <TouchableOpacity key={idx} style={styles.barColumn} onPress={() => setSelectedDay(selectedDay?.date === day.date ? null : day)}>
-                  <View style={[styles.bar, { 
-                    height: Math.max(5, Math.min(day.load / 10, 80)), 
-                    backgroundColor: day.load > 800 ? '#F44336' : '#5856D6', 
-                    opacity: selectedDay ? (selectedDay.date === day.date ? 1 : 0.4) : 1 
-                  }]} />
-                  <Text style={styles.barDate}>{parseInt(day.date.split('-')[2])}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <WeeklyLoadBars
+              days={data.weeklyLoadData}
+              selectedDate={selectedDay?.date}
+              onSelectDay={(day) => {
+                setSelectedDay((prev) => (prev?.date === day.date ? null : day));
+              }}
+            />
           </Pressable>
         </View>
 
@@ -264,10 +259,6 @@ const styles = StyleSheet.create({
     trendHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
     trendCard: { backgroundColor: '#2a2a2a', padding: 15, borderRadius: 20, marginBottom: 20, elevation: 2, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10 },
     trendTitle: { fontSize: 14, fontWeight: '700', color: '#888888', marginBottom: 15 },
-    chartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 100 },
-    barColumn: { alignItems: 'center', width: '12%' },
-    bar: { width: '80%', borderRadius: 4 },
-    barDate: { fontSize: 10, color: '#666666', marginTop: 5 },
     loadSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
     totalLoadText: { fontSize: 22, fontWeight: '800', color: '#ffffff' },
     percentageBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, gap: 4 },
