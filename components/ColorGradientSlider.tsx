@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, memo } from 'react';
+import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
 import { View, Text, StyleSheet, PanResponder, Dimensions } from 'react-native';
 
 interface ColorGradientSliderProps {
@@ -42,6 +42,11 @@ const ColorGradientSlider = memo(
         setDisplayValue(newValue);
       }
     }, []);
+
+    useEffect(() => {
+      displayValueRef.current = initialValue;
+      setDisplayValue(initialValue);
+    }, [initialValue]);
 
     // Called once the track is laid out — measure() gives absolute pageX on screen
     const handleTrackLayout = useCallback(() => {

@@ -8,19 +8,73 @@ import ColorGradientSlider from '../components/ColorGradientSlider';
 import { WorkoutType } from '../lib/workoutType';
 import { useWorkoutTypeContext } from '../lib/WorkoutTypeContext';
 
+function getTodayIso(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
 export default function TrainingModal() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ duration?: string; prefillNotes?: string; fitbitStartTime?: string; fitbitLogId?: string }>();
-  const queryClient = useQueryClient(); // 2. Query Client initialisieren
-  const { selectedWorkoutTypes } = useWorkoutTypeContext();
+  const params = useLocalSearchParams<{ duration?: string; prefillNotes?: string; fitbitStartTime?: string; fitbitLogId?: string; workoutId?: string; date?: string }>();
+  const queryClient = useQueryClient();
+  const { selectedWorkoutTypes, setSelectedWorkoutTypes } = useWorkoutTypeContext();
+  const targetDate = typeof params.date === 'string' ? params.date : getTodayIso();
+  const workoutId = typeof params.workoutId === 'string' ? params.workoutId : null;
+  const isEditing = !!workoutId;
   
   const [duration, setDuration] = useState('60');
   const [muscularEffort, setMuscularEffort] = useState(5);
   const [respirationEffort, setRespirationEffort] = useState(5);
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [existingDate, setExistingDate] = useState(targetDate);
 
   useEffect(() => {
+    let isMounted = true;
+
+    async function hydrateForEdit() {
+      if (!isEditing || !workoutId) {
+        return;
+      }
+
+      setIsInitializing(true);
+
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (!authData.user) throw new Error('Nicht authentifiziert');
+
+        const { data: workout, error } = await supabase
+          .from('workout_logs')
+          .select('id, date, workout_types, duration_minutes, muscular_effort, respiration_effort, calculated_load, notes')
+          .eq('user_id', authData.user.id)
+          .eq('id', workoutId)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!workout) throw new Error('Training nicht gefunden');
+
+        if (isMounted) {
+          setExistingDate(workout.date || targetDate);
+          setDuration(String(workout.duration_minutes || 0));
+          setMuscularEffort(workout.muscular_effort ?? 5);
+          setRespirationEffort(workout.respiration_effort ?? 5);
+          setNotes(workout.notes ?? '');
+          setSelectedWorkoutTypes(Array.isArray(workout.workout_types) ? workout.workout_types : []);
+        }
+      } catch (error: any) {
+        if (isMounted) {
+          Alert.alert('Fehler', error.message || 'Training konnte nicht geladen werden.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsInitializing(false);
+        }
+      }
+    }
+
+    void hydrateForEdit();
+
     if (typeof params.duration === 'string') {
       const parsed = Math.max(1, Math.round(Number(params.duration) || 0));
       if (parsed > 0) {
@@ -43,7 +97,11 @@ export default function TrainingModal() {
         setNotes(withTime);
       }
     }
-  }, [params.duration, params.prefillNotes, params.fitbitStartTime]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isEditing, params.duration, params.fitbitStartTime, params.prefillNotes, setSelectedWorkoutTypes, targetDate, workoutId]);
 
   const handleMuscularChange = useCallback((v: number) => setMuscularEffort(v), []);
   const handleRespirationChange = useCallback((v: number) => setRespirationEffort(v), []);
@@ -91,23 +149,29 @@ export default function TrainingModal() {
         ? `${normalizedNotes}${normalizedNotes ? '\n' : ''}${fitbitMarker}`
         : normalizedNotes;
 
-      const { error } = await supabase.from('workout_logs').insert({
-        user_id: user.id,
+      const payload = {
         workout_types: selectedWorkoutTypes,
         duration_minutes: durationInt,
         muscular_effort: muscularEffort,
         respiration_effort: respirationEffort,
         calculated_load: previewLoad,
         notes: finalNotes,
-        date: new Date().toISOString().split('T')[0]
-      });
+        date: isEditing ? existingDate : targetDate,
+      };
+
+      const { error } = isEditing
+        ? await supabase.from('workout_logs').update(payload).eq('user_id', user.id).eq('id', workoutId)
+        : await supabase.from('workout_logs').insert({
+            user_id: user.id,
+            ...payload,
+          });
 
       if (error) throw error;
 
-      // 4. CACHE INVALIDIEREN
-      // Das sorgt dafür, dass das Dashboard die neuen Last-Werte und 
-      // den daraus resultierenden neuen Readiness-Score sofort lädt.
-      await queryClient.invalidateQueries({ queryKey: ['dashboardData'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboardData'] }),
+        queryClient.invalidateQueries({ queryKey: ['wellnessHistory'] }),
+      ]);
 
       router.back();
     } catch (error: any) {
@@ -117,9 +181,18 @@ export default function TrainingModal() {
     }
   }
 
+  if (isInitializing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#5856D6" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" style={{ backgroundColor: '#1a1a1a' }}>
-      <Text style={styles.title}>Training loggen</Text>
+      <Text style={styles.title}>{isEditing ? 'Training bearbeiten' : 'Training loggen'}</Text>
+      <Text style={styles.dateText}>{isEditing ? existingDate : targetDate}</Text>
 
       <View style={styles.loadPreviewCard}>
         <Text style={styles.previewLabel}>Voraussichtliche Last</Text>
@@ -198,7 +271,7 @@ export default function TrainingModal() {
         {isSaving ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.saveButtonText}>Training speichern</Text>
+          <Text style={styles.saveButtonText}>{isEditing ? 'Änderungen speichern' : 'Training speichern'}</Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -206,8 +279,10 @@ export default function TrainingModal() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' },
   container: { padding: 25, backgroundColor: '#1a1a1a', paddingBottom: 40, paddingTop: 40 },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 12, textAlign: 'center', color: '#ffffff' },
+  dateText: { textAlign: 'center', color: '#9a9a9a', marginBottom: 12, fontSize: 13 },
   
   loadPreviewCard: {
     backgroundColor: '#2a2a2a',
