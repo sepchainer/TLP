@@ -16,8 +16,8 @@ interface WorkoutTypeCategory {
 
 export default function WorkoutTypeSelector() {
   const router = useRouter();
-  const { selectedWorkoutTypes, setSelectedWorkoutTypes } = useWorkoutTypeContext();
-  const [localSelectedTypes, setLocalSelectedTypes] = useState<WorkoutType[]>(selectedWorkoutTypes);
+  const { setSelectedWorkoutTypes } = useWorkoutTypeContext();
+  const [localSelectedTypes, setLocalSelectedTypes] = useState<WorkoutType[]>([]);
   
   // Holt die dynamischen Ränder des Geräts (Notch oben, Home-Balken unten)
   const insets = useSafeAreaInsets();
