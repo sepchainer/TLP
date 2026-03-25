@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // WICHTIG: Neuer Import
-import { WorkoutType } from '../lib/workoutType';
+import { WorkoutType, normalizeWorkoutTypes } from '../lib/workoutType';
 import { useWorkoutTypeContext } from '../lib/WorkoutTypeContext';
 
 interface WorkoutTypeCategory {
@@ -16,8 +16,21 @@ interface WorkoutTypeCategory {
 
 export default function WorkoutTypeSelector() {
   const router = useRouter();
-  const { setSelectedWorkoutTypes } = useWorkoutTypeContext();
-  const [localSelectedTypes, setLocalSelectedTypes] = useState<WorkoutType[]>([]);
+  const params = useLocalSearchParams<{ workoutTypes?: string }>();
+  const { selectedWorkoutTypes, setSelectedWorkoutTypes } = useWorkoutTypeContext();
+
+  const initialTypes = useMemo(() => {
+    if (typeof params.workoutTypes === 'string') {
+      return normalizeWorkoutTypes(params.workoutTypes);
+    }
+    return normalizeWorkoutTypes(selectedWorkoutTypes);
+  }, [params.workoutTypes, selectedWorkoutTypes]);
+
+  const [localSelectedTypes, setLocalSelectedTypes] = useState<WorkoutType[]>(initialTypes);
+
+  useEffect(() => {
+    setLocalSelectedTypes(initialTypes);
+  }, [initialTypes]);
   
   // Holt die dynamischen Ränder des Geräts (Notch oben, Home-Balken unten)
   const insets = useSafeAreaInsets();

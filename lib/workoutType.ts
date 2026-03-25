@@ -47,3 +47,37 @@ export function getWorkoutTypeLabel(type: string | number): string {
   }
   return WORKOUT_LABELS_BY_NAME[String(type)] ?? String(type);
 }
+
+function toWorkoutTypeArray(input: unknown): unknown[] {
+  if (Array.isArray(input)) {
+    return input;
+  }
+
+  if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return trimmed.split(',').map((value) => value.trim());
+    }
+  }
+
+  return [];
+}
+
+export function normalizeWorkoutTypes(input: unknown): WorkoutType[] {
+  const validTypes = new Set<number>(
+    Object.values(WorkoutType).filter((value): value is number => typeof value === 'number')
+  );
+
+  const normalized = toWorkoutTypeArray(input)
+    .map((value) => (typeof value === 'number' ? value : Number(value)))
+    .filter((value) => Number.isInteger(value) && validTypes.has(value));
+
+  return Array.from(new Set(normalized)) as WorkoutType[];
+}

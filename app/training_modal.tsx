@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import ColorGradientSlider from '../components/ColorGradientSlider';
-import { WorkoutType } from '../lib/workoutType';
+import { WorkoutType, normalizeWorkoutTypes } from '../lib/workoutType';
 import { useWorkoutTypeContext } from '../lib/WorkoutTypeContext';
 
 function getTodayIso(): string {
@@ -14,7 +14,7 @@ function getTodayIso(): string {
 
 export default function TrainingModal() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ duration?: string; prefillNotes?: string; fitbitStartTime?: string; fitbitLogId?: string; workoutId?: string; date?: string }>();
+  const params = useLocalSearchParams<{ duration?: string; prefillNotes?: string; fitbitStartTime?: string; fitbitLogId?: string; workoutId?: string; date?: string; workoutTypes?: string }>();
   const queryClient = useQueryClient();
   const { selectedWorkoutTypes, setSelectedWorkoutTypes } = useWorkoutTypeContext();
   const targetDate = typeof params.date === 'string' ? params.date : getTodayIso();
@@ -60,7 +60,7 @@ export default function TrainingModal() {
           setMuscularEffort(workout.muscular_effort ?? 5);
           setRespirationEffort(workout.respiration_effort ?? 5);
           setNotes(workout.notes ?? '');
-          setSelectedWorkoutTypes(Array.isArray(workout.workout_types) ? workout.workout_types : []);
+          setSelectedWorkoutTypes(normalizeWorkoutTypes(workout.workout_types));
         }
       } catch (error: any) {
         if (isMounted) {
@@ -74,6 +74,10 @@ export default function TrainingModal() {
     }
 
     void hydrateForEdit();
+
+    if (!isEditing && typeof params.workoutTypes === 'string') {
+      setSelectedWorkoutTypes(normalizeWorkoutTypes(params.workoutTypes));
+    }
 
     if (typeof params.duration === 'string') {
       const parsed = Math.max(1, Math.round(Number(params.duration) || 0));
@@ -101,7 +105,7 @@ export default function TrainingModal() {
     return () => {
       isMounted = false;
     };
-  }, [isEditing, params.duration, params.fitbitStartTime, params.prefillNotes, setSelectedWorkoutTypes, targetDate, workoutId]);
+  }, [isEditing, params.duration, params.fitbitStartTime, params.prefillNotes, params.workoutTypes, setSelectedWorkoutTypes, targetDate, workoutId]);
 
   const handleMuscularChange = useCallback((v: number) => setMuscularEffort(v), []);
   const handleRespirationChange = useCallback((v: number) => setRespirationEffort(v), []);
@@ -202,7 +206,12 @@ export default function TrainingModal() {
       <Text style={styles.subTitle}>Was hast du trainiert? (optional)</Text>
       <TouchableOpacity
         style={styles.selectTypesButton}
-        onPress={() => router.push('/workout_type_selector')}
+        onPress={() =>
+          router.push({
+            pathname: '/workout_type_selector',
+            params: { workoutTypes: JSON.stringify(selectedWorkoutTypes) },
+          })
+        }
       >
         <Ionicons name="checkmark-circle" size={20} color="#5856D6" style={styles.selectTypesIcon} />
         <View style={styles.selectTypesContent}>

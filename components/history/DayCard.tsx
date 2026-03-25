@@ -82,10 +82,21 @@ export function DayCard({
           </View>
         </>
       ) : (
-        <TouchableOpacity style={styles.emptyWellnessBox} onPress={onEditWellness}>
-          <Ionicons name="heart-outline" size={18} color="#888888" />
-          <Text style={styles.emptyWellnessText}>Kein Wellness-Log für diesen Tag. Jetzt nachtragen.</Text>
-        </TouchableOpacity>
+        <View style={styles.emptyWellnessBox}>
+          <View style={styles.emptyWellnessTextGroup}>
+            <Ionicons name="heart-outline" size={18} color="#888888" />
+            <Text style={styles.emptyWellnessText}>Kein Wellness-Log für diesen Tag.</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.emptyWellnessCta}
+            onPress={onEditWellness}
+            accessibilityLabel="Wellness Log nachtragen"
+            accessibilityHint="Oeffnet den Wellness Editor fuer diesen Tag"
+          >
+            <Ionicons name="add-circle-outline" size={16} color="#ffffff" />
+            <Text style={styles.emptyWellnessCtaText}>Jetzt nachtragen</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <View style={styles.trainingSectionHeader}>
@@ -165,15 +176,31 @@ const styles = StyleSheet.create({
   flagChipWarning: { backgroundColor: '#3b2d17', borderColor: '#8a6731' },
   flagText: { color: '#f2f2f2', fontSize: 12, fontWeight: '700' },
   emptyWellnessBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    gap: 10,
     backgroundColor: '#242424',
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2f2f2f',
+  },
+  emptyWellnessTextGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   emptyWellnessText: { color: '#9a9a9a', fontSize: 13, fontWeight: '500' },
+  emptyWellnessCta: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#007AFF',
+  },
+  emptyWellnessCtaText: { color: '#ffffff', fontSize: 12, fontWeight: '800' },
   trainingSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   trainingSectionTitle: { color: '#ffffff', fontSize: 16, fontWeight: '800' },
   addTrainingButton: {
