@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
-export const ReadinessGauge = ({ score }: { score: number }) => {
+export const ReadinessGauge = ({ score, onPress }: { score: number; onPress?: () => void }) => {
   const size = 200;
   const strokeWidth = 15;
   const center = size / 2;
@@ -17,25 +17,32 @@ export const ReadinessGauge = ({ score }: { score: number }) => {
   };
 
   return (
-    <View style={styles.gaugeContainer}>
-      <Svg width={size} height={size}>
-        <Circle cx={center} cy={center} r={radius} stroke="#444444" strokeWidth={strokeWidth} fill="none" />
-        <Circle
-          cx={center} cy={center} r={radius}
-          stroke={getColor(score)}
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          fill="none"
-          transform={`rotate(-90 ${center} ${center})`}
-        />
-      </Svg>
-      <View style={styles.scoreTextContainer}>
-        <Text style={styles.scoreValue}>{score}</Text>
-        <Text style={styles.scoreLabel}>Readiness</Text>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        opacity: onPress ? (pressed ? 0.7 : 1) : 1,
+      })}
+    >
+      <View style={styles.gaugeContainer}>
+        <Svg width={size} height={size}>
+          <Circle cx={center} cy={center} r={radius} stroke="#444444" strokeWidth={strokeWidth} fill="none" />
+          <Circle
+            cx={center} cy={center} r={radius}
+            stroke={getColor(score)}
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            fill="none"
+            transform={`rotate(-90 ${center} ${center})`}
+          />
+        </Svg>
+        <View style={styles.scoreTextContainer}>
+          <Text style={styles.scoreValue}>{score}</Text>
+          <Text style={styles.scoreLabel}>Readiness</Text>
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 };
 

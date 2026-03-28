@@ -120,7 +120,7 @@ export default function Dashboard() {
         </View>
         
         <View style={styles.mainContent}>
-          <ReadinessGauge score={data.readinessScore} />
+          <ReadinessGauge score={data.readinessScore} onPress={() => router.push('/tabs/analytics')} />
         </View>
 
         <View style={styles.fitbitWorkoutSection}>
