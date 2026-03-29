@@ -110,6 +110,56 @@ npx supabase secrets list
 
 ---
 
+## Dependency-Sicherheit
+
+### Sicherheits- und Dependency-Checks
+
+Folgende npm-Skripte sind im Projekt hinterlegt:
+
+```bash
+npm run audit        # npm audit mit Schwellwert high
+npm run audit:fix    # automatische Security-Fixes ohne force
+npm run deps:check   # Expo SDK-Kompatibilitaet der Dependencies pruefen
+npm run deps:doctor  # Expo Doctor ausfuehren
+```
+
+### GitHub Actions Workflow
+
+Der Workflow unter `.github/workflows/check-dependencies.yml` fuehrt automatisch aus:
+
+- `npm ci`
+- `npm run audit`
+- `npm run deps:doctor`
+
+Trigger:
+
+- Push auf `main`
+- Pull Requests nach `main`
+- Woechentlicher Lauf (Montag, 06:00 UTC)
+
+### Dependabot
+
+Dependabot ist konfiguriert in `.github/dependabot.yml` mit:
+
+- Woechentlichen npm-Updates
+- Woechentlichen GitHub-Actions-Updates
+- Ignore-Regeln fuer Expo-/React-Kernpakete, damit kein unkontrollierter SDK-Drift entsteht
+
+Hinweis fuer private Repositories:
+
+- In GitHub unter Settings -> Security and analysis muessen Dependabot Alerts,
+  Dependabot Security Updates und Dependabot Version Updates aktiviert sein.
+
+### npm Konfiguration
+
+In `.npmrc` sind folgende Defaults gesetzt:
+
+- `save-exact=true` fuer reproduzierbare Versionen bei neuen Installs
+- `fund=false` fuer weniger CI-Noise
+- `audit=true` fuer standardmaessige Sicherheitspruefung
+
+---
+
 ## Datenbank-Schema (relevante Tabellen)
 
 ### `fitbit_tokens`
