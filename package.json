@@ -37,7 +37,7 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "@types/react-dom": "~19.1.0",
-    "supabase": "^2.78.1",
+    "supabase": "^2.84.4",
     "typescript": "~5.9.2"
   },
   "private": true
