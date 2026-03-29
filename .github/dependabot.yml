@@ -13,6 +13,7 @@ updates:
       - dependency-name: "expo"
       - dependency-name: "expo-*"
       - dependency-name: "react-native"
+      - dependency-name: "react-native-safe-area-context"
       - dependency-name: "react"
       - dependency-name: "react-dom"
       - dependency-name: "typescript"
