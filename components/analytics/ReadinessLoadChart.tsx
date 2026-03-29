@@ -25,6 +25,12 @@ export function ReadinessLoadChart({ data, period, selectedIndex, onSelectedInde
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
+  useEffect(() => {
+    if (dismissSignal !== undefined) {
+      onSelectedIndexChange(null);
+    }
+  }, [dismissSignal, onSelectedIndexChange]);
+
   if (!data || data.length === 0) {
     return (
       <View style={{ padding: 20, alignItems: 'center' }}>
@@ -90,12 +96,6 @@ export function ReadinessLoadChart({ data, period, selectedIndex, onSelectedInde
   };
 
   const linePathD = generateSplinePath();
-
-  useEffect(() => {
-    if (dismissSignal !== undefined) {
-      onSelectedIndexChange(null);
-    }
-  }, [dismissSignal, onSelectedIndexChange]);
 
   const getHitIndex = (tapX: number, tapY: number): number | null => {
     const hitRadius = 14;

@@ -10,6 +10,9 @@
     "audit": "npm audit --audit-level=high",
     "audit:fix": "npm audit fix",
     "deps:check": "npx expo install --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "deps:check": "npx expo install --check",
     "deps:doctor": "npx expo-doctor"
   },
   "dependencies": {
@@ -37,6 +40,8 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "@types/react-dom": "~19.1.0",
+    "eslint": "9.39.4",
+    "eslint-config-expo": "55.0.0",
     "supabase": "^2.84.4",
     "typescript": "~5.9.2"
   },

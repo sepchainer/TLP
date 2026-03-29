@@ -29,3 +29,6 @@ jobs:
 
       - name: Expo dependency doctor
         run: npm run deps:doctor
+
+      - name: Lint
+        run: npm run lint
