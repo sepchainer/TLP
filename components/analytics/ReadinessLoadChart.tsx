@@ -151,8 +151,8 @@ export function ReadinessLoadChart({ data, period, selectedIndex, onSelectedInde
   const selectedLoadY = selectedPoint ? scaleLoadY(selectedPoint.load) : 0;
   const selectedAnchorY = selectedPoint ? selectedReadinessY : 0;
 
-  const tooltipWidth = 130;
-  const tooltipHeight = 56;
+  const tooltipWidth = 118;
+  const tooltipHeight = 48;
   const chartMinX = padding.left + 4;
   const chartMaxX = chartWidth - padding.right - tooltipWidth - 4;
   const chartMinY = padding.top + 4;
@@ -214,18 +214,20 @@ export function ReadinessLoadChart({ data, period, selectedIndex, onSelectedInde
   const selectedTopY = Math.min(selectedReadinessY, selectedLoadY);
   const selectedBottomY = Math.max(selectedReadinessY, selectedLoadY);
 
+  const barGap = barWidth / 2 + 14; // Mindestabstand Tooltip-Rand zum Balken-Rand
   const candidates = [
-    { x: selectedX + 12, y: selectedTopY - tooltipHeight - 8 },
-    { x: selectedX - tooltipWidth - 12, y: selectedTopY - tooltipHeight - 8 },
-    { x: selectedX + 12, y: selectedBottomY + 8 },
-    { x: selectedX - tooltipWidth - 12, y: selectedBottomY + 8 },
+    { x: selectedX + barGap, y: selectedTopY - tooltipHeight - 8 },
+    { x: selectedX - tooltipWidth - barGap, y: selectedTopY - tooltipHeight - 8 },
+    { x: selectedX + barGap, y: selectedBottomY + 8 },
+    { x: selectedX - tooltipWidth - barGap, y: selectedBottomY + 8 },
     { x: selectedX - tooltipWidth / 2, y: selectedTopY - tooltipHeight - 10 },
   ];
 
-  const clampedCandidates = candidates.map(candidate => ({
-    x: Math.max(chartMinX, Math.min(candidate.x, chartMaxX)),
-    y: Math.max(chartMinY, Math.min(candidate.y, chartMaxY)),
-  }));
+  const clampedCandidates = candidates.map(candidate => {
+    const clampedX = Math.max(chartMinX, Math.min(candidate.x, chartMaxX));
+    const clampedY = Math.max(chartMinY, Math.min(candidate.y, chartMaxY));
+    return { x: clampedX, y: clampedY, wasXClamped: Math.abs(clampedX - candidate.x) > 0.5 };
+  });
 
   const candidateWithScore = clampedCandidates.map(candidate => {
     const centerX = candidate.x + tooltipWidth / 2;
@@ -234,11 +236,15 @@ export function ReadinessLoadChart({ data, period, selectedIndex, onSelectedInde
     const intersectsLine = lineIntersectsTooltip(candidate.x, candidate.y, tooltipWidth, tooltipHeight);
     const isPinnedToEdge = candidate.x <= chartMinX + 2 || candidate.x >= chartMaxX - 2;
     const overlapsSelectedX = selectedX >= candidate.x && selectedX <= candidate.x + tooltipWidth;
+    // Only penalise bar-overlap when the candidate freely chose this x (not forced by clamping)
+    const tooCloseToBar = !candidate.wasXClamped &&
+      (candidate.x + tooltipWidth > selectedX - barGap && candidate.x < selectedX + barGap);
     const score =
       distanceToAnchor +
       (intersectsLine ? 300 : 0) +
       (isPinnedToEdge ? 120 : 0) +
-      (overlapsSelectedX ? 160 : 0);
+      (overlapsSelectedX ? 160 : 0) +
+      (tooCloseToBar ? 300 : 0);
     return { ...candidate, score };
   });
 
@@ -257,7 +263,9 @@ export function ReadinessLoadChart({ data, period, selectedIndex, onSelectedInde
     const distanceToAnchor = Math.hypot(centerX - selectedX, centerY - selectedAnchorY);
     const intersectsLine = lineIntersectsTooltip(candidate.x, candidate.y, tooltipWidth, tooltipHeight);
     const overlapsSelectedX = selectedX >= candidate.x && selectedX <= candidate.x + tooltipWidth;
-    const score = distanceToAnchor + (intersectsLine ? 300 : 0) + (overlapsSelectedX ? 120 : 0);
+    const tooCloseToBar =
+      (candidate.x + tooltipWidth > selectedX - barGap && candidate.x < selectedX + barGap);
+    const score = distanceToAnchor + (intersectsLine ? 300 : 0) + (overlapsSelectedX ? 160 : 0) + (tooCloseToBar ? 300 : 0);
     return { ...candidate, score };
   });
 
@@ -420,7 +428,7 @@ export function ReadinessLoadChart({ data, period, selectedIndex, onSelectedInde
               x1={selectedX}
               x2={selectedX}
               y1={padding.top}
-              y2={padding.top + innerHeight + 4}
+              y2={padding.top + innerHeight + 2}
               stroke="#7f88a8"
               strokeWidth="1"
               opacity={0.32}
@@ -428,7 +436,7 @@ export function ReadinessLoadChart({ data, period, selectedIndex, onSelectedInde
             />
             <Circle
               cx={selectedX}
-              cy={padding.top + innerHeight + 8}
+              cy={padding.top + innerHeight + 4}
               r="3.5"
               fill="#cfd6f6"
               opacity={0.9}
@@ -453,10 +461,10 @@ export function ReadinessLoadChart({ data, period, selectedIndex, onSelectedInde
               strokeWidth="1"
               opacity={0.96}
             />
-            <SvgText x={tooltipX + 10} y={tooltipY + 20} fontSize="11" fill="#2f95dc" textAnchor="start">
+            <SvgText x={tooltipX + 9} y={tooltipY + 18} fontSize="11" fill="#2f95dc" textAnchor="start">
               <TSpan>Readiness: {Math.round(selectedPoint.readiness)}</TSpan>
             </SvgText>
-            <SvgText x={tooltipX + 10} y={tooltipY + 38} fontSize="11" fill="#5856D6" textAnchor="start">
+            <SvgText x={tooltipX + 9} y={tooltipY + 34} fontSize="11" fill="#5856D6" textAnchor="start">
               <TSpan>Last: {Math.round(selectedPoint.load)}</TSpan>
             </SvgText>
           </>
