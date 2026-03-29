@@ -51,7 +51,7 @@ export default function RootLayout() {
     } else if (!session && !inAuthGroup) {
       router.replace('/auth/login');
     }
-  }, [session, initialized, segments]);
+  }, [session, initialized, segments, router]);
 
   if (!initialized) {
     return (

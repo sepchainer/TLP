@@ -3,7 +3,7 @@ import { View, Text, Button, StyleSheet, TouchableOpacity, Alert, ActivityIndica
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri, useAuthRequest, ResponseType } from 'expo-auth-session';
+import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';
 import { Ionicons } from '@expo/vector-icons';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -22,7 +22,7 @@ interface FitbitTokenResponse {
 
 interface EdgeFunctionErrorPayload {
   error?: string;
-  errors?: Array<{ message?: string }>;
+  errors?: { message?: string }[];
 }
 
 interface FitbitDisconnectedResponse {
@@ -62,7 +62,7 @@ export default function ProfileScreen() {
       const { code } = response.params;
       exchangeCodeForToken(code, request?.codeVerifier);
     }
-  }, [response]);
+  }, [response, request?.codeVerifier]);
 
   async function checkFitbitStatus() {
     setIsCheckingFitbit(true);

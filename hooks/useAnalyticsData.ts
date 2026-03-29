@@ -22,8 +22,6 @@ export function useAnalyticsData(period: Period = 'week') {
 
       const today = getIsoDate(0);
       const ninetyDaysAgoStr = getIsoDate(90);
-      const thirteenDaysAgoStr = getIsoDate(13);
-      const sixDaysAgoStr = getIsoDate(6);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Nicht eingeloggt");

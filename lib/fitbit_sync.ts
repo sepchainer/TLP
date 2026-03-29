@@ -17,7 +17,7 @@ interface FitbitNotConnectedResponse {
 
 interface FitbitErrorPayload {
   error?: string;
-  errors?: Array<{ message?: string }>;
+  errors?: { message?: string }[];
 }
 
 interface FitbitActivityListItem {

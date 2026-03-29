@@ -5,7 +5,6 @@ import {
   getHistoryContextStart,
   ReadinessWellnessLog,
   ReadinessWorkoutLog,
-  shiftIsoDate,
 } from '../lib/readinessTimeline';
 
 const PAGE_SIZE = 5;

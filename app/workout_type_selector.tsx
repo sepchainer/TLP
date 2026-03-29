@@ -8,10 +8,10 @@ import { useWorkoutTypeContext } from '../lib/WorkoutTypeContext';
 
 interface WorkoutTypeCategory {
   name: string;
-  types: Array<{
+  types: {
     key: WorkoutType;
     label: string;
-  }>;
+  }[];
 }
 
 export default function WorkoutTypeSelector() {
