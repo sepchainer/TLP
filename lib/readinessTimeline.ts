@@ -8,6 +8,7 @@ export interface ReadinessWellnessLog {
   physical: number;
   sleep: number;
   stress: number;
+  soreness: number;
   is_sick: boolean;
   is_injured: boolean;
   hrv: number | null;
@@ -98,7 +99,9 @@ export function calculateReadinessForDate(
       physical: currentWellness.physical,
       sleep: currentWellness.sleep,
       stress: currentWellness.stress,
+      soreness: currentWellness.soreness ?? 5,
       isSick: currentWellness.is_sick,
+      isInjured: currentWellness.is_injured,
     },
     {
       hrv: currentWellness.hrv,

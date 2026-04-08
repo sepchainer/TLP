@@ -59,6 +59,10 @@ export function DayCard({
               <Text style={styles.metricValue}>{day.readinessScore ?? '--'}</Text>
             </View>
             <View style={styles.metricPill}>
+              <Text style={styles.metricLabel}>Muskelkater</Text>
+              <Text style={styles.metricValue}>{wellness.soreness ?? '--'}/10</Text>
+            </View>
+            <View style={styles.metricPill}>
               <Text style={styles.metricLabel}>HRV</Text>
               <Text style={styles.metricValue}>{formatMetricValue(wellness.hrv, ' ms')}</Text>
             </View>

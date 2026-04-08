@@ -74,7 +74,17 @@ export function useDashboardData() {
         const rhr = fitbitRealtime?.restingHr ?? data.resting_hr;
 
         finalReadinessScore = calculateReadiness(
-          { mood: data.mood, recovery: data.recovery, health: data.health_status, physical: data.physical, sleep: data.sleep, stress: data.stress, isSick: data.is_sick },
+          {
+            mood: data.mood,
+            recovery: data.recovery,
+            health: data.health_status,
+            physical: data.physical,
+            sleep: data.sleep,
+            stress: data.stress,
+            soreness: data.soreness ?? 5,
+            isSick: data.is_sick,
+            isInjured: data.is_injured ?? false,
+          },
           { hrv, restingHr: rhr, sleepHours: fitbitRealtime?.sleepHours ?? data.sleep_hours, baselineHrv: avgHrv, baselineRhr: avgRhr },
           currentLoad, 
           thisWeekTotal - currentLoad, 

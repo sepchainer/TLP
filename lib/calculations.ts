@@ -5,7 +5,9 @@ export interface SubjectiveData {
   physical: number;
   sleep: number;
   stress: number;
+  soreness: number;
   isSick: boolean;
+  isInjured: boolean;
 }
 
 export interface ObjectiveData {
@@ -16,6 +18,98 @@ export interface ObjectiveData {
   baselineRhr: number;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function tenPointScore(value: number): number {
+  return clamp(value, 1, 10) * 10;
+}
+
+function inverseTenPointScore(value: number): number {
+  return (11 - clamp(value, 1, 10)) * 10;
+}
+
+function calculateSubjectiveScore(subjective: SubjectiveData): number {
+  const weightedScore = (
+    tenPointScore(subjective.mood) * 0.08 +
+    tenPointScore(subjective.recovery) * 0.2 +
+    tenPointScore(subjective.health) * 0.18 +
+    tenPointScore(subjective.physical) * 0.17 +
+    tenPointScore(subjective.sleep) * 0.15 +
+    inverseTenPointScore(subjective.stress) * 0.1 +
+    inverseTenPointScore(subjective.soreness) * 0.12
+  );
+
+  return clamp(12 + (weightedScore * 0.88), 0, 95);
+}
+
+function calculateObjectiveModifier(objective: ObjectiveData | undefined): number {
+  if (!objective) {
+    return 0;
+  }
+
+  let modifier = 0;
+
+  if (typeof objective.sleepHours === 'number' && objective.sleepHours > 0) {
+    const sleepDelta = clamp((objective.sleepHours - 7.5) / 2, -1, 1);
+    modifier += sleepDelta * 2.5;
+  }
+
+  if (typeof objective.hrv === 'number' && objective.hrv > 0 && objective.baselineHrv > 0) {
+    const hrvDelta = clamp(((objective.hrv - objective.baselineHrv) / objective.baselineHrv) / 0.12, -1, 1);
+    modifier += hrvDelta * 4;
+  }
+
+  if (typeof objective.restingHr === 'number' && objective.restingHr > 0 && objective.baselineRhr > 0) {
+    const rhrDelta = clamp(((objective.baselineRhr - objective.restingHr) / objective.baselineRhr) / 0.08, -1, 1);
+    modifier += rhrDelta * 3;
+  }
+
+  return clamp(modifier, -8, 8);
+}
+
+function calculateLoadPenalty(
+  currentDayLoad: number,
+  pastSixDaysLoad: number,
+  pastThirteenDaysLoad: number
+): number {
+  const previousDailyAverage = pastSixDaysLoad > 0
+    ? pastSixDaysLoad / 6
+    : pastThirteenDaysLoad > 0
+      ? pastThirteenDaysLoad / 13
+      : 0;
+
+  const protectedBaseline = Math.max(previousDailyAverage, currentDayLoad > 0 ? 75 : 0);
+  let penalty = 0;
+  let dailySpikeRatio = 1;
+
+  if (currentDayLoad > 0 && protectedBaseline > 0) {
+    dailySpikeRatio = currentDayLoad / protectedBaseline;
+    if (dailySpikeRatio > 1.2) {
+      penalty += Math.min((dailySpikeRatio - 1.2) * 6.5, 8);
+    }
+  }
+
+  const acuteAverage = (pastSixDaysLoad + currentDayLoad) / 7;
+  const chronicAverage = pastThirteenDaysLoad > 0 ? pastThirteenDaysLoad / 13 : acuteAverage;
+  const loadRampRatio = chronicAverage > 0 ? acuteAverage / chronicAverage : 1;
+
+  if (loadRampRatio > 1.08) {
+    penalty += Math.min((loadRampRatio - 1.08) * 12, 5);
+  }
+
+  if (currentDayLoad >= 350 && currentDayLoad > acuteAverage * 1.5) {
+    penalty += 3;
+  }
+
+  if (currentDayLoad >= 700 && dailySpikeRatio > 2) {
+    penalty += 2;
+  }
+
+  return clamp(penalty, 0, 16);
+}
+
 export function calculateReadiness(
   subjective: SubjectiveData,
   objective: ObjectiveData | undefined,
@@ -23,77 +117,23 @@ export function calculateReadiness(
   pastSixDaysLoad: number,
   pastThirteenDaysLoad: number
 ) {
-  // 1. HARD CONSTRAINT: Krankheit
-  if (subjective.isSick) return 15;
-
-  // 2. SUBJEKTIVER SCORE (Skala 1-10 -> 0-100)
-  const invertedStress = 11 - subjective.stress;
-  const subjectiveValues = [
-    subjective.mood, subjective.recovery, subjective.health,
-    subjective.physical, subjective.sleep, invertedStress
-  ];
-  const subAverage = subjectiveValues.reduce((a, b) => a + b, 0) / subjectiveValues.length;
-  let baseScore = subAverage * 10;
-
-  // 3. OBJEKTIVER SCORE (Vergleich mit individueller Baseline)
-  let objectiveWeight = 0;
-  let objectiveTotalScore = 0;
-  let metricsCount = 0;
-
-  if (objective) {
-    // Schlaf Score (Ziel: 8h)
-    if (objective.sleepHours && objective.sleepHours > 0) {
-      objectiveTotalScore += Math.min((objective.sleepHours / 8) * 100, 100);
-      objectiveWeight += 0.3;
-      metricsCount++;
-    }
-
-    // HRV Score (Vergleich mit 30-Tage-Schnitt)
-    if (objective.hrv && objective.hrv > 0) {
-      const hrvRatio = objective.hrv / objective.baselineHrv;
-      objectiveTotalScore += Math.min(hrvRatio * 100, 110);
-      objectiveWeight += 0.2;
-      metricsCount++;
-    }
-
-    // Ruhepuls Score (Abweichung von Baseline)
-    if (objective.restingHr && objective.restingHr > 0) {
-      // 100 Punkte wenn gleich Baseline, Abzug wenn Puls höher
-      const rhrDiff = objective.restingHr - objective.baselineRhr;
-      const rhrScore = Math.max(100 - (rhrDiff * 3), 0); 
-      objectiveTotalScore += Math.min(rhrScore, 100);
-      objectiveWeight += 0.1;
-      metricsCount++;
-    }
+  if (subjective.isSick) {
+    return 8;
   }
 
-  // Gewichtete Zusammenführung
-  let finalScore = baseScore;
-  if (metricsCount > 0) {
-    const objAverage = objectiveTotalScore / metricsCount;
-    finalScore = (baseScore * (1 - objectiveWeight)) + (objAverage * objectiveWeight);
+  const subjectiveScore = calculateSubjectiveScore(subjective);
+  const objectiveModifier = calculateObjectiveModifier(objective);
+  const loadPenalty = calculateLoadPenalty(currentDayLoad, pastSixDaysLoad, pastThirteenDaysLoad);
+
+  let finalScore = subjectiveScore + objectiveModifier - loadPenalty;
+
+  if (subjective.isInjured) {
+    finalScore = Math.min(finalScore - 12, 55);
   }
 
-  // 4. ACWR LOGIK (Acute-Chronic Workload Ratio)
-  const acuteLoad = (pastSixDaysLoad + currentDayLoad) / 7;
-  const chronicLoad = (pastThirteenDaysLoad + currentDayLoad) / 14;
-
-  const acwr = chronicLoad > 0 ? acuteLoad / chronicLoad : 1.0;
-
-  // ACWR Penalty
-  let loadModifier = 0;
-  if (acwr > 1.3) {
-    loadModifier = (acwr - 1.3) * 50; // -10 bei 1.5 ACWR
-  } else if (acwr < 0.8) {
-    loadModifier = (0.8 - acwr) * 10; // Kleiner Abzug bei De-Training
+  if (subjective.health <= 2) {
+    finalScore = Math.min(finalScore, 30);
   }
 
-  // 5. MONOTONIE / SPIKE ABZUG
-  if (currentDayLoad > (acuteLoad * 2) && currentDayLoad > 300) {
-    loadModifier += 10;
-  }
-
-  finalScore -= loadModifier;
-
-  return Math.min(Math.max(Math.round(finalScore), 0), 100);
+  return clamp(Math.round(finalScore), 0, 100);
 }

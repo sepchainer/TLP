@@ -30,6 +30,7 @@ export default function WellnessModal() {
   const [recovery, setRecovery] = useState(5);
   const [health, setHealth] = useState(5);
   const [physical, setPhysical] = useState(5);
+  const [soreness, setSoreness] = useState(5);
   const [sleepQuality, setSleepQuality] = useState(5);
   const [stress, setStress] = useState(5);
   const [isSick, setIsSick] = useState(false);
@@ -54,7 +55,7 @@ export default function WellnessModal() {
 
         const { data: existingLog, error: existingError } = await supabase
           .from('wellness_logs')
-          .select('date, mood, recovery, health_status, physical, sleep, stress, is_sick, is_injured, hrv, sleep_hours, resting_hr')
+          .select('*')
           .eq('user_id', authData.user.id)
           .eq('date', targetDate)
           .maybeSingle();
@@ -66,6 +67,7 @@ export default function WellnessModal() {
           setRecovery(existingLog.recovery ?? 5);
           setHealth(existingLog.health_status ?? 5);
           setPhysical(existingLog.physical ?? 5);
+          setSoreness(existingLog.soreness ?? 5);
           setSleepQuality(existingLog.sleep ?? 5);
           setStress(existingLog.stress ?? 5);
           setIsSick(!!existingLog.is_sick);
@@ -121,6 +123,7 @@ export default function WellnessModal() {
   const handleRecovery = useCallback((value: number) => setRecovery(value), []);
   const handleHealth = useCallback((value: number) => setHealth(value), []);
   const handlePhysical = useCallback((value: number) => setPhysical(value), []);
+  const handleSoreness = useCallback((value: number) => setSoreness(value), []);
   const handleSleep = useCallback((value: number) => setSleepQuality(value), []);
   const handleStress = useCallback((value: number) => setStress(value), []);
 
@@ -142,6 +145,7 @@ export default function WellnessModal() {
         recovery,
         health_status: health,
         physical,
+        soreness,
         sleep: sleepQuality,
         stress,
         is_sick: isSick,
@@ -155,7 +159,7 @@ export default function WellnessModal() {
       const [wellnessContext, workoutContext] = await Promise.all([
         supabase
           .from('wellness_logs')
-          .select('date, mood, recovery, health_status, physical, sleep, stress, is_sick, is_injured, hrv, sleep_hours, resting_hr')
+          .select('*')
           .eq('user_id', authData.user.id)
           .gte('date', contextStart)
           .lte('date', targetDate),
@@ -184,6 +188,7 @@ export default function WellnessModal() {
         recovery,
         health_status: health,
         physical,
+        soreness,
         sleep: sleepQuality,
         stress,
         is_sick: isSick,
@@ -247,6 +252,7 @@ export default function WellnessModal() {
       <ColorGradientSlider label="Stimmung" initialValue={mood} onValueChange={handleMood} />
       <ColorGradientSlider label="Erholung" initialValue={recovery} onValueChange={handleRecovery} />
       <ColorGradientSlider label="Körperliches Gefühl" initialValue={physical} onValueChange={handlePhysical} />
+      <ColorGradientSlider label="Muskelkater" initialValue={soreness} onValueChange={handleSoreness} isReversed={true} />
       <ColorGradientSlider label="Gesundheit" initialValue={health} onValueChange={handleHealth} />
       <ColorGradientSlider label="Stresslevel" initialValue={stress} onValueChange={handleStress} isReversed={true} />
       <ColorGradientSlider label="Schlafqualität" initialValue={sleepQuality} onValueChange={handleSleep} />

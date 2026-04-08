@@ -40,3 +40,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local database artifacts
+/backups/
+/supabase/.temp/

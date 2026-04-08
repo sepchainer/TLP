@@ -79,6 +79,7 @@ function toWellnessLog(row: any): WellnessHistoryLog {
     physical: row.physical,
     sleep: row.sleep,
     stress: row.stress,
+    soreness: row.soreness ?? 5,
     is_sick: !!row.is_sick,
     is_injured: !!row.is_injured,
     hrv: row.hrv ?? null,
@@ -112,7 +113,7 @@ export function useWellnessHistory() {
       const [wellnessResult, workoutResult, olderWellnessResult, olderWorkoutResult] = await Promise.all([
         supabase
           .from('wellness_logs')
-          .select('id, date, mood, recovery, health_status, physical, sleep, stress, is_sick, is_injured, hrv, sleep_hours, resting_hr')
+          .select('*')
           .eq('user_id', user.id)
           .gte('date', contextStart)
           .lte('date', newestVisibleDate),
