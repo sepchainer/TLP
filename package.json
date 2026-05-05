@@ -42,7 +42,7 @@
     "@types/react-dom": "~19.1.0",
     "eslint": "9.39.4",
     "eslint-config-expo": "~10.0.0",
-    "supabase": "^2.84.4",
+    "supabase": "^2.98.2",
     "typescript": "~5.9.2"
   },
   "private": true
